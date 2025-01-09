@@ -1,0 +1,13 @@
+# Start Generation Here
+*.log
+*.env
+node_modules/
+dist/
+build/
+coverage/
+*.tgz
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# End Generation Here
