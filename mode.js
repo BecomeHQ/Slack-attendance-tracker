@@ -1,12 +1,6 @@
-const publicHolidaySchema = new mongoose.Schema({
-  date: { type: Date, required: true },
-  name: { type: String, required: true },
-  description: { type: String, default: "" },
-});
+import { PublicHoliday, RestrictedHoliday } from "./models/holidays.js";
 
-const publicHoliday = mongoose.model("publicHoliday", publicHolidaySchema);
-
-const publicHolidays = [
+const publicHolidaysList = [
   { date: new Date("2024-01-01"), name: "New Year" },
   { date: new Date("2024-01-14"), name: "Pongal" },
   { date: new Date("2024-01-15"), name: "Thiruvalluvar Day" },
@@ -33,7 +27,7 @@ const publicHolidays = [
 
 async function addPublicHolidays() {
   try {
-    await publicHoliday.insertMany(publicHolidays);
+    await PublicHoliday.insertMany(publicHolidaysList);
     console.log("publicHolidays added to the database successfully.");
   } catch (error) {
     console.error("Error adding publicHolidays to the database:", error);
@@ -42,18 +36,7 @@ async function addPublicHolidays() {
 
 addPublicHolidays();
 
-const restrictedHolidaySchema = new mongoose.Schema({
-  date: { type: Date, required: true },
-  name: { type: String, required: true },
-  description: { type: String, default: "" },
-});
-
-const RestrictedHoliday = mongoose.model(
-  "RestrictedHoliday",
-  restrictedHolidaySchema
-);
-
-const restrictedHolidays = [
+const restrictedHolidaysList = [
   { date: new Date("2024-01-06"), name: "Guru Gobind Singh's Birthday" },
   { date: new Date("2024-01-13"), name: "Lohri" },
   { date: new Date("2024-01-16"), name: "Uzavar Thirunal" },
@@ -82,7 +65,7 @@ const restrictedHolidays = [
 
 async function addRestrictedHolidays() {
   try {
-    await RestrictedHoliday.insertMany(restrictedHolidays);
+    await RestrictedHoliday.insertMany(restrictedHolidaysList);
     console.log("Restricted holidays added to the database successfully.");
   } catch (error) {
     console.error("Error adding restricted holidays to the database:", error);
