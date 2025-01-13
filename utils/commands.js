@@ -1,5 +1,17 @@
 const { Leave } = require("../models/holidays");
-const { verifySickLeave } = require("../utils/verify");
+const {
+  verifySickLeave,
+  verifyBurnoutLeave,
+  verifyCasualLeave,
+  verifyMensuralLeave,
+  verifyMaternityLeave,
+  verifyPaternityLeave,
+  verifyBereavementLeave,
+  verifyUnpaidLeave,
+  verifyInternshipLeave,
+  verifyPersonalLeave,
+} = require("../utils/verify");
+const { User } = require("../models/user.js");
 
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
@@ -253,17 +265,56 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
   const reason =
     view.state.values.reason.reason_input.value || "No reason provided";
   const type =
-    view.state.values.leave_type.leave_type_select.selected_option.value;
+    view.state.values.leave_type.leave_type_select.selected_option?.value;
 
-  if (type == "sick_leave") {
-    const { isValid, message } = verifySickLeave(user, fromDate, toDate);
-    if (!isValid) {
-      await client.chat.postMessage({
-        channel: user,
-        text: `${message}`,
-      });
-      return;
-    }
+  let verificationResult;
+
+  switch (type) {
+    case "Sick_Leave":
+      verificationResult = await verifySickLeave(user, fromDate, toDate);
+      break;
+    case "Burnout":
+      verificationResult = await verifyBurnoutLeave(
+        user,
+        fromDate,
+        toDate,
+        reason
+      );
+      break;
+    case "Casual_Leave":
+      verificationResult = await verifyCasualLeave(user, fromDate, toDate);
+      break;
+    case "Mensural_Leaves":
+      verificationResult = await verifyMensuralLeave(user, fromDate, toDate);
+      break;
+    case "Maternity_Leave":
+      verificationResult = await verifyMaternityLeave(user, fromDate, toDate);
+      break;
+    case "Paternity_Leave":
+      verificationResult = await verifyPaternityLeave(user, fromDate, toDate);
+      break;
+    case "Bereavement_Leave":
+      verificationResult = await verifyBereavementLeave(user, fromDate, toDate);
+      break;
+    case "Unpaid_Leave":
+      verificationResult = await verifyUnpaidLeave(user, fromDate, toDate);
+      break;
+    case "Internship_Leave":
+      verificationResult = await verifyInternshipLeave(user, fromDate, toDate);
+      break;
+    case "Personal_Leave":
+      verificationResult = await verifyPersonalLeave(user, fromDate, toDate);
+      break;
+    default:
+      verificationResult = { isValid: false, message: "Invalid leave type." };
+  }
+
+  if (!verificationResult || !verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `${verificationResult?.message || "An unknown error occurred."}`,
+    });
+    return;
   }
 
   const leaveDetails = `
@@ -276,7 +327,13 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
   `;
 
   try {
-    const leave = new Leave({ user, fromDate, toDate, reason, type });
+    const leave = new Leave({
+      user,
+      fromDate,
+      toDate,
+      reason,
+      leaveType: type,
+    });
     await leave.save();
     await client.chat.postMessage({
       channel: user,
@@ -380,9 +437,26 @@ const approveLeave = async ({ ack, body, client, action }) => {
       { status: "Approved" },
       { new: true }
     );
+    console.log(leaveRequest);
 
     if (!leaveRequest) {
       throw new Error("Leave request not found");
+    }
+
+    const user = await User.findOne({ slackId: leaveRequest.user });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (leaveRequest.leaveType === "Sick_Leave") {
+      const leaveDays = calculateLeaveDays(
+        leaveRequest.fromDate,
+        leaveRequest.toDate
+      );
+      console.log({ leaveDays });
+
+      user.sickLeave = (user.sickLeave || 0) + leaveDays;
+      await user.save();
     }
 
     await client.chat.postMessage({
@@ -410,6 +484,13 @@ const approveLeave = async ({ ack, body, client, action }) => {
       text: "An error occurred while approving the leave request. Please try again.",
     });
   }
+};
+
+const calculateLeaveDays = (fromDate, toDate) => {
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+  const timeDiff = end - start;
+  return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
 };
 
 const rejectLeave = async ({ ack, body, client, action }) => {

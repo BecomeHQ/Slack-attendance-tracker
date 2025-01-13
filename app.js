@@ -9,49 +9,36 @@ const {
   approveLeave,
   rejectLeave,
 } = require("./utils/commands");
+// const validNames = require("./utils/user");
 
-const saveSlackUsers = async (accessToken) => {
-  try {
-    const response = await fetch("https://slack.com/api/users.lookupByEmail", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-    const data = await response.json();
-    console.log("Users fetched from Slack:", data);
+// const saveSlackUsers = async () => {
+//   try {
+//     const response = await fetch(`https://slack.com/api/users.list`, {
+//       method: "GET",
+//       headers: {
+//         Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+//         "Content-Type": "application/x-www-form-urlencoded",
+//       },
+//     });
+//     const data = await response.json();
 
-    // if (data.ok && data.members) {
-    //   for (const user of data.members) {
-    //     const { id: slackUserId, profile } = user;
-    //     const email = profile?.email;
-    //     const username = profile?.real_name || user.name;
+//     if (data.ok && Array.isArray(data.members)) {
+//       const userMap = {};
 
-    //     if (email) {
-    //       let existingUser = await User.findOne({ email });
-    //       if (!existingUser) {
-    //         const newUser = new User({
-    //           username,
-    //           email,
-    //           slackUserId,
-    //         });
-    //         await newUser.save();
-    //         console.log(
-    //           `User saved: ${username}, Email: ${email}, Slack ID: ${slackUserId}`
-    //         );
-    //       } else {
-    //         console.log(
-    //           `User already exists: ${existingUser.username}, Email: ${email}, Slack ID: ${slackUserId}`
-    //         );
-    //       }
-    //     }
-    //   }
-    // }
-  } catch (error) {
-    console.error("Error fetching users from Slack:", error);
-  }
-};
+//       for (const user of data.members) {
+//         const { id: slackUserId, name } = user;
+//         if (validNames.includes(name)) {
+//           const newUser = new User({ username: name, slackId: slackUserId });
+//           await newUser.save();
+//           userMap[name] = { slackUserId };
+//         }
+//       }
+//       console.log("Filtered User map:", userMap);
+//     }
+//   } catch (error) {
+//     console.error("Error fetching users from Slack:", error);
+//   }
+// };
 
 // saveSlackUsers();
 

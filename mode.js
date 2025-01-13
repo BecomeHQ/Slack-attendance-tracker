@@ -1,4 +1,4 @@
-import { PublicHoliday, RestrictedHoliday } from "./models/holidays.js";
+const { PublicHoliday, RestrictedHoliday } = require("./models/holidays.js");
 
 const publicHolidaysList = [
   { date: new Date("2024-01-01"), name: "New Year" },

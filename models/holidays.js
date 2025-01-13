@@ -25,6 +25,7 @@ const leaveSchema = new mongoose.Schema({
   toDate: String,
   reason: String,
   status: { type: String, default: "Pending" },
+  leaveType: { type: String, required: true },
 });
 
 const Leave = mongoose.model("Leave", leaveSchema);
