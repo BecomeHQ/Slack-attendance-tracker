@@ -10,8 +10,10 @@ const {
   verifyUnpaidLeave,
   verifyInternshipLeave,
   verifyPersonalLeave,
+  verifyRestrictedHoliday,
 } = require("../utils/verify");
 const { User } = require("../models/user.js");
+const e = require("express");
 
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
@@ -281,6 +283,13 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
         reason
       );
       break;
+    case "Restricted_Holiday":
+      verificationResult = await verifyRestrictedHoliday(
+        user,
+        fromDate,
+        toDate
+      );
+      break;
     case "Casual_Leave":
       verificationResult = await verifyCasualLeave(user, fromDate, toDate);
       break;
@@ -448,16 +457,53 @@ const approveLeave = async ({ ack, body, client, action }) => {
       throw new Error("User not found");
     }
 
-    if (leaveRequest.leaveType === "Sick_Leave") {
-      const leaveDays = calculateLeaveDays(
-        leaveRequest.fromDate,
-        leaveRequest.toDate
-      );
-      console.log({ leaveDays });
+    const leaveDays = calculateLeaveDays(
+      leaveRequest.fromDate,
+      leaveRequest.toDate
+    );
+    console.log({ leaveDays });
 
+    if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
-      await user.save();
+    } else if (leaveRequest.leaveType === "Burnout") {
+      user.burnout = (user.burnout || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Paternity_Leave") {
+      user.paternityLeave = (user.paternityLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Casual_Leave") {
+      user.casualLeave = (user.casualLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Bereavement_Leave") {
+      user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Restricted_Holiday") {
+      user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Mensural_Leaves") {
+      user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Maternity_Leave") {
+      user.maternityLeave = (user.maternityLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Unpaid_Leave") {
+      user.unpaidLeave = (user.unpaidLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "WFH") {
+      user.wfh = (user.wfh || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Sick_Leave") {
+      user.halfSickLeave = (user.halfSickLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Restricted_Holiday") {
+      user.halfRestrictedHoliday =
+        (user.halfRestrictedHoliday || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Burnout") {
+      user.halfBurnout = (user.halfBurnout || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Period_Leaves") {
+      user.halfPeriodLeaves = (user.halfPeriodLeaves || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Compensatory_Leave") {
+      user.halfCompensatoryLeave =
+        (user.halfCompensatoryLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Casual_Leave") {
+      user.halfCasualLeave = (user.halfCasualLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Maternity_Leave") {
+      user.halfMaternityLeave = (user.halfMaternityLeave || 0) + leaveDays;
+    } else if (leaveRequest.leaveType === "Half_Paternity_Leave") {
+      user.halfPaternityLeave = (user.halfPaternityLeave || 0) + leaveDays;
     }
+
+    await user.save();
 
     await client.chat.postMessage({
       channel: body.user.id,

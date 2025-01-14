@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   mensuralLeaves: { type: Number, default: 0 },
   casualLeave: { type: Number, default: 0 },
   maternityLeave: { type: Number, default: 0 },
+  unpaidLeave: { type: Number, default: 0 },
   paternityLeave: { type: Number, default: 0 },
   bereavementLeave: { type: Number, default: 0 },
   wfh: { type: Number, default: 0 },
