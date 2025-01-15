@@ -14,6 +14,7 @@ const {
 } = require("../utils/verify");
 const { User } = require("../models/user.js");
 const e = require("express");
+const { Attendance } = require("../models/checkin");
 
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
@@ -105,93 +106,9 @@ const applyLeave = async ({ command, ack, client, body }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "WFH",
-                  },
-                  value: "WFH",
-                },
-                {
-                  text: {
-                    type: "plain_text",
                     text: "Unpaid Leave",
                   },
                   value: "Unpaid_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Sick Leave",
-                  },
-                  value: "Half_Sick_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Restricted Holiday",
-                  },
-                  value: "Half_Restricted_Holiday",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Burnout",
-                  },
-                  value: "Half_Burnout",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Period Leaves",
-                  },
-                  value: "Half_Period_Leaves",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Compensatory Leave",
-                  },
-                  value: "Half_Compensatory_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Casual Leave",
-                  },
-                  value: "Half_Casual_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Maternity Leave",
-                  },
-                  value: "Half_Maternity_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Paternity Leave",
-                  },
-                  value: "Half_Paternity_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Bereavement Leave",
-                  },
-                  value: "Half_Bereavement_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half WFH",
-                  },
-                  value: "Half_WFH",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Unpaid Half Day",
-                  },
-                  value: "Unpaid_Half_Day",
                 },
               ],
               action_id: "leave_type_select",
@@ -581,10 +498,92 @@ const rejectLeave = async ({ ack, body, client, action }) => {
   }
 };
 
+const checkIn = async ({ command, ack, client, body }) => {
+  await ack();
+
+  console.log("Body received in checkIn:", body);
+
+  const userId = body.user_id;
+  if (!userId) {
+    console.error("User ID is undefined. Cannot check in.");
+    await client.chat.postMessage({
+      channel: body.channel_id,
+      text: "There was an error checking you in. Please try again.",
+    });
+    return;
+  }
+
+  const now = new Date();
+  const time = now.toTimeString().split(" ")[0]; // Get time in hr:min:seconds format (24 hr format)
+
+  const formattedDate = now.toISOString().split("T")[0];
+  const attendance = new Attendance({
+    user: userId,
+    checkinTime: `${time}`,
+    checkoutTime: null,
+    date: formattedDate.split("T")[0],
+  });
+
+  try {
+    await attendance.save();
+    await client.chat.postMessage({
+      channel: userId,
+      text: `You have checked in at ${now.toLocaleTimeString()}.`,
+    });
+  } catch (error) {
+    console.error("Error saving check-in:", error);
+    await client.chat.postMessage({
+      channel: userId,
+      text: "There was an error checking you in. Please try again.",
+    });
+  }
+};
+
+const checkOut = async ({ ack, body, client }) => {
+  await ack();
+
+  console.log("Body received in checkOut:", body);
+
+  const userId = body.user_id;
+  const now = new Date();
+  const time = now.toTimeString().split(" ")[0]; // Get time in hr:min:seconds format (24 hr format)
+
+  try {
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: now.toISOString().split("T")[0],
+    }).sort({ checkinTime: -1 });
+
+    if (!attendance) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: "You have not checked in today.",
+      });
+      return;
+    }
+
+    attendance.checkoutTime = time;
+    await attendance.save();
+
+    await client.chat.postMessage({
+      channel: userId,
+      text: `You have checked out at ${now.toLocaleTimeString()}.`,
+    });
+  } catch (error) {
+    console.error("Error saving check-out:", error);
+    await client.chat.postMessage({
+      channel: userId,
+      text: "There was an error checking you out. Please try again.",
+    });
+  }
+};
+
 module.exports = {
   leave_application_modal,
   applyLeave,
   manageLeaves,
   approveLeave,
   rejectLeave,
+  checkIn,
+  checkOut,
 };

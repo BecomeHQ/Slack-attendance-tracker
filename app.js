@@ -1,6 +1,5 @@
 require("dotenv").config();
 require("./connect/db-connect");
-const { User } = require("./models/user");
 const app = require("./utils/slack-instance");
 const {
   leave_application_modal,
@@ -8,6 +7,8 @@ const {
   manageLeaves,
   approveLeave,
   rejectLeave,
+  checkIn,
+  checkOut,
 } = require("./utils/commands");
 // const validNames = require("./utils/user");
 
@@ -51,6 +52,10 @@ app.command("/manage-leaves", manageLeaves);
 app.action(/approve_leave_(.*)/, approveLeave);
 
 app.action(/reject_leave_(.*)/, rejectLeave);
+
+app.command("/jibble-in", checkIn);
+
+app.command("/jibble-out", checkOut);
 
 (async () => {
   await app.start(process.env.PORT || 3000);
