@@ -70,6 +70,6 @@ app.command("/upcoming-holidays", showUpcomingHolidays);
 app.command("/upcoming-leaves", upcomingLeaves);
 
 (async () => {
-  await app.start(process.env.PORT || 3000);
+  await app.start(process.env.PORT || 1000);
   console.log("⚡️ Slack Bolt app is running!");
 })();
