@@ -14,7 +14,8 @@ const {
   showUpcomingHolidays,
   upcomingLeaves,
 } = require("./utils/commands");
-// const validNames = require("./utils/user");
+const validNames = require("./utils/user");
+const { User } = require("./models/user");
 
 // const saveSlackUsers = async () => {
 //   try {
