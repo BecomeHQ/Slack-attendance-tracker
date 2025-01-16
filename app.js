@@ -9,6 +9,10 @@ const {
   rejectLeave,
   checkIn,
   checkOut,
+  onLeave,
+  checkBalance,
+  showUpcomingHolidays,
+  upcomingLeaves,
 } = require("./utils/commands");
 // const validNames = require("./utils/user");
 
@@ -56,6 +60,14 @@ app.action(/reject_leave_(.*)/, rejectLeave);
 app.command("/jibble-in", checkIn);
 
 app.command("/jibble-out", checkOut);
+
+app.command("/onleave", onLeave);
+
+app.command("/check-balance", checkBalance);
+
+app.command("/upcoming-holidays", showUpcomingHolidays);
+
+app.command("/upcoming-leaves", upcomingLeaves);
 
 (async () => {
   await app.start(process.env.PORT || 3000);

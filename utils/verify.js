@@ -5,9 +5,11 @@ const { publicHolidaysList } = require("../mode");
 
 const isWeekendOrPublicHoliday = (date) => {
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-  const isPublicHoliday = publicHolidaysList.some(
-    (holiday) => holiday.date.getTime() === date.getTime()
-  );
+  const isPublicHoliday =
+    Array.isArray(publicHolidaysList) &&
+    publicHolidaysList.some(
+      (holiday) => holiday.date.getTime() === date.getTime()
+    );
   return isWeekend || isPublicHoliday;
 };
 
@@ -22,13 +24,7 @@ const verifySickLeave = async (user, fromDate, toDate) => {
       message: "Please provide valid start and end dates",
     };
   }
-
-  if (startDate < currentDate) {
-    return {
-      isValid: false,
-      message: "Leave date cannot be in the past.",
-    };
-  }
+  console.log({ startDate, endDate });
 
   if (startDate > endDate) {
     return {

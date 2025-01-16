@@ -12,15 +12,6 @@ const userSchema = new mongoose.Schema({
   unpaidLeave: { type: Number, default: 0 },
   paternityLeave: { type: Number, default: 0 },
   bereavementLeave: { type: Number, default: 0 },
-  wfh: { type: Number, default: 0 },
-  halfSickLeave: { type: Number, default: 0 },
-  halfRestrictedHoliday: { type: Number, default: 0 },
-  halfBurnout: { type: Number, default: 0 },
-  halfPeriodLeaves: { type: Number, default: 0 },
-  halfCompensatoryLeave: { type: Number, default: 0 },
-  halfCasualLeave: { type: Number, default: 0 },
-  halfMaternityLeave: { type: Number, default: 0 },
-  halfPaternityLeave: { type: Number, default: 0 },
 });
 
 const User = mongoose.model("User", userSchema);

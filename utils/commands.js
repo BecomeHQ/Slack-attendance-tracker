@@ -15,6 +15,7 @@ const {
 const { User } = require("../models/user.js");
 const e = require("express");
 const { Attendance } = require("../models/checkin");
+const { publicHolidaysList, restrictedHolidaysList } = require("../mode.js");
 
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
@@ -578,6 +579,190 @@ const checkOut = async ({ ack, body, client }) => {
   }
 };
 
+const onLeave = async ({ command, ack, client, body }) => {
+  await ack();
+
+  const today = new Date().toISOString().split("T")[0];
+
+  try {
+    const leavesToday = await Leave.find({
+      fromDate: { $lte: today },
+      toDate: { $gte: today },
+      status: "Approved",
+    });
+
+    if (leavesToday.length === 0) {
+      await client.chat.postMessage({
+        channel: body.user_id,
+        text: "No users are on leave today.",
+      });
+      return;
+    }
+
+    const leaveDetails = leavesToday
+      .map((leave) => {
+        return `*User:* <@${leave.user}>\n*From:* ${leave.fromDate}\n*To:* ${leave.toDate}\n*Reason:* ${leave.reason}`;
+      })
+      .join("\n\n");
+
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: `*Users on leave today:*\n\n${leaveDetails}`,
+    });
+  } catch (error) {
+    console.error("Error fetching leaves for today:", error);
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: "An error occurred while fetching leave information. Please try again.",
+    });
+  }
+};
+
+const checkBalance = async ({ command, ack, client, body }) => {
+  await ack();
+
+  const userId = body.user_id;
+
+  try {
+    const user = await User.findOne({ slackId: userId });
+
+    if (!user) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: "User not found. Please ensure your Slack ID is registered.",
+      });
+      return;
+    }
+
+    const totalLeaves = {
+      sickLeave: 12,
+      restrictedHoliday: 6,
+      burnout: 6,
+      mensuralLeaves: 18,
+      casualLeave: 6,
+      maternityLeave: 13,
+      unpaidLeave: 20,
+      paternityLeave: 20,
+      bereavementLeave: 5,
+    };
+
+    const leaveBalances = {
+      sickLeave: totalLeaves.sickLeave - user.sickLeave,
+      restrictedHoliday: totalLeaves.restrictedHoliday - user.restrictedHoliday,
+      burnout: totalLeaves.burnout - user.burnout,
+      mensuralLeaves: totalLeaves.mensuralLeaves - user.mensuralLeaves,
+      casualLeave: totalLeaves.casualLeave - user.casualLeave,
+      maternityLeave: totalLeaves.maternityLeave - user.maternityLeave,
+      unpaidLeave: totalLeaves.unpaidLeave - user.unpaidLeave,
+      paternityLeave: totalLeaves.paternityLeave - user.paternityLeave,
+      bereavementLeave: totalLeaves.bereavementLeave - user.bereavementLeave,
+    };
+
+    const leaveBalanceMessage = `
+      *Leave Balances:*
+      - Sick Leave: ${leaveBalances.sickLeave} days remaining
+      - Restricted Holiday: ${leaveBalances.restrictedHoliday} days remaining
+      - Burnout: ${leaveBalances.burnout} days remaining
+      - Mensural Leaves: ${leaveBalances.mensuralLeaves} days remaining
+      - Casual Leave: ${leaveBalances.casualLeave} days remaining
+      - Maternity Leave: ${leaveBalances.maternityLeave} weeks remaining
+      - Unpaid Leave: ${leaveBalances.unpaidLeave} days remaining
+      - Paternity Leave: ${leaveBalances.paternityLeave} days remaining
+      - Bereavement Leave: ${leaveBalances.bereavementLeave} days remaining
+    `;
+
+    await client.chat.postMessage({
+      channel: userId,
+      text: leaveBalanceMessage,
+    });
+  } catch (error) {
+    console.error("Error fetching leave balances:", error);
+    await client.chat.postMessage({
+      channel: userId,
+      text: "An error occurred while fetching your leave balances. Please try again.",
+    });
+  }
+};
+
+const showUpcomingHolidays = async ({ command, ack, client, body }) => {
+  await ack();
+
+  const today = new Date();
+  const upcomingPublicHolidays = publicHolidaysList.filter(
+    (holiday) => holiday.date >= today
+  );
+  const upcomingRestrictedHolidays = restrictedHolidaysList.filter(
+    (holiday) => holiday.date >= today
+  );
+
+  const formatHolidays = (holidays) =>
+    holidays
+      .map((holiday) => `*${holiday.name}* - ${holiday.date.toDateString()}`)
+      .join("\n");
+
+  const publicHolidaysText = formatHolidays(upcomingPublicHolidays);
+  const restrictedHolidaysText = formatHolidays(upcomingRestrictedHolidays);
+
+  const message = `
+    *Upcoming Public Holidays:*\n${publicHolidaysText || "None"}
+    \n\n*Upcoming Restricted Holidays:*\n${restrictedHolidaysText || "None"}
+  `;
+
+  try {
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: message,
+    });
+  } catch (error) {
+    console.error("Error sending upcoming holidays:", error);
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: "An error occurred while fetching upcoming holidays. Please try again.",
+    });
+  }
+};
+
+const upcomingLeaves = async ({ command, ack, client, body }) => {
+  await ack();
+
+  const today = new Date().toISOString().split("T")[0];
+  console.log("Today's date:", today);
+
+  try {
+    const upcomingLeaves = await Leave.find({
+      fromDate: { $gte: today },
+      status: "Approved",
+    });
+
+    console.log("Upcoming leaves found:", upcomingLeaves);
+
+    if (upcomingLeaves.length === 0) {
+      await client.chat.postMessage({
+        channel: body.user_id,
+        text: "There are no upcoming leaves.",
+      });
+      return;
+    }
+
+    const leaveDetails = upcomingLeaves
+      .map((leave) => {
+        return `*User:* <@${leave.user}>\n*From:* ${leave.fromDate}\n*To:* ${leave.toDate}\n*Reason:* ${leave.reason}`;
+      })
+      .join("\n\n");
+
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: `*Upcoming Leaves:*\n\n${leaveDetails}`,
+    });
+  } catch (error) {
+    console.error("Error fetching upcoming leaves:", error);
+    await client.chat.postMessage({
+      channel: body.user_id,
+      text: "An error occurred while fetching upcoming leaves. Please try again.",
+    });
+  }
+};
+
 module.exports = {
   leave_application_modal,
   applyLeave,
@@ -586,4 +771,8 @@ module.exports = {
   rejectLeave,
   checkIn,
   checkOut,
+  onLeave,
+  checkBalance,
+  showUpcomingHolidays,
+  upcomingLeaves,
 };
