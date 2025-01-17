@@ -266,6 +266,46 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
       channel: user,
       text: `:white_check_mark: Your leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New leave request submitted!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New leave request submitted!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
   } catch (error) {
     console.error("Error saving leave to database:", error);
     await client.chat.postMessage({
@@ -423,9 +463,11 @@ const approveLeave = async ({ ack, body, client, action }) => {
 
     await user.save();
 
-    await client.chat.postMessage({
-      channel: body.user.id,
-      text: `You have approved the leave request for <@${leaveRequest.user}>.`,
+    await client.chat.update({
+      channel: body.channel.id,
+      ts: body.message.ts,
+      text: `Leave request for <@${leaveRequest.user}> has been approved and removed from the list.`,
+      blocks: [],
     });
 
     await client.chat.postMessage({
@@ -472,9 +514,11 @@ const rejectLeave = async ({ ack, body, client, action }) => {
       throw new Error("Leave request not found");
     }
 
-    await client.chat.postMessage({
-      channel: body.user.id,
-      text: `You have rejected the leave request for <@${leaveRequest.user}>.`,
+    await client.chat.update({
+      channel: body.channel.id,
+      ts: body.message.ts,
+      text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
+      blocks: [],
     });
 
     await client.chat.postMessage({
