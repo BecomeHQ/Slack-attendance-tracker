@@ -65,9 +65,9 @@ const applyLeave = async ({ command, ack, client, body }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Period Leaves",
+                    text: "Menstrual leave",
                   },
-                  value: "Period_Leaves",
+                  value: "Mensural_Leaves",
                 },
                 {
                   text: {
@@ -270,13 +270,13 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New leave request submitted!\n\n${leaveDetails}`,
+      text: `:bell: New leave request received!\n\n${leaveDetails}`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New leave request submitted!\n\n${leaveDetails}`,
+            text: `:bell: New leave request received!\n\n${leaveDetails}`,
           },
         },
         {
