@@ -17,10 +17,52 @@ const e = require("express");
 const { Attendance } = require("../models/checkin");
 const { publicHolidaysList, restrictedHolidaysList } = require("../mode.js");
 
+// Utility function to format dates
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const options = { day: "numeric", month: "short", year: "numeric" };
+  return date.toLocaleDateString("en-US", options);
+};
+
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
 
   try {
+    const userId = body.user_id;
+    const user = await User.findOne({ slackId: userId });
+
+    if (!user) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: "User not found. Please ensure your Slack ID is registered.",
+      });
+      return;
+    }
+
+    const totalLeaves = {
+      sickLeave: 12,
+      restrictedHoliday: 6,
+      burnout: 6,
+      mensuralLeaves: 18,
+      casualLeave: 6,
+      maternityLeave: 13,
+      unpaidLeave: 20,
+      paternityLeave: 20,
+      bereavementLeave: 5,
+    };
+
+    const leaveBalances = {
+      sickLeave: totalLeaves.sickLeave - user.sickLeave,
+      restrictedHoliday: totalLeaves.restrictedHoliday - user.restrictedHoliday,
+      burnout: totalLeaves.burnout - user.burnout,
+      mensuralLeaves: totalLeaves.mensuralLeaves - user.mensuralLeaves,
+      casualLeave: totalLeaves.casualLeave - user.casualLeave,
+      maternityLeave: totalLeaves.maternityLeave - user.maternityLeave,
+      unpaidLeave: totalLeaves.unpaidLeave - user.unpaidLeave,
+      paternityLeave: totalLeaves.paternityLeave - user.paternityLeave,
+      bereavementLeave: totalLeaves.bereavementLeave - user.bereavementLeave,
+    };
+
     const result = await client.views.open({
       trigger_id: body.trigger_id,
       view: {
@@ -44,70 +86,63 @@ const applyLeave = async ({ command, ack, client, body }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Sick Leave",
+                    text: `Sick Leave (${leaveBalances.sickLeave} remaining)`,
                   },
                   value: "Sick_Leave",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Restricted Holiday",
+                    text: `Restricted Holiday (${leaveBalances.restrictedHoliday} remaining)`,
                   },
                   value: "Restricted_Holiday",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Burnout",
+                    text: `Burnout (${leaveBalances.burnout} remaining)`,
                   },
                   value: "Burnout",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Menstrual leave",
+                    text: `Menstrual leave (${leaveBalances.mensuralLeaves} remaining)`,
                   },
                   value: "Mensural_Leaves",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Compensatory Leave",
-                  },
-                  value: "Compensatory_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Casual Leave",
+                    text: `Casual Leave (${leaveBalances.casualLeave} remaining)`,
                   },
                   value: "Casual_Leave",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Maternity Leave",
+                    text: `Maternity Leave (${leaveBalances.maternityLeave} remaining)`,
                   },
                   value: "Maternity_Leave",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Paternity Leave",
+                    text: `Paternity Leave (${leaveBalances.paternityLeave} remaining)`,
                   },
                   value: "Paternity_Leave",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Bereavement Leave",
+                    text: `Bereavement Leave (${leaveBalances.bereavementLeave} remaining)`,
                   },
                   value: "Bereavement_Leave",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: "Unpaid Leave",
+                    text: `Unpaid Leave (${leaveBalances.unpaidLeave} remaining)`,
                   },
                   value: "Unpaid_Leave",
                 },
@@ -180,12 +215,39 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const fromDate = view.state.values.dates.start_date.selected_date;
-  const toDate = view.state.values.end_dates.end_date.selected_date;
+  const fromDate = formatDate(view.state.values.dates.start_date.selected_date);
+  const toDate = formatDate(view.state.values.end_dates.end_date.selected_date);
   const reason =
     view.state.values.reason.reason_input.value || "No reason provided";
   const type =
     view.state.values.leave_type.leave_type_select.selected_option?.value;
+
+  const overlappingLeaves = await Leave.find({
+    user: user,
+    status: "Approved",
+    $or: [
+      { fromDate: { $lte: toDate, $gte: fromDate } },
+      { toDate: { $lte: toDate, $gte: fromDate } },
+      { fromDate: { $lte: fromDate }, toDate: { $gte: toDate } },
+    ],
+  });
+
+  if (overlappingLeaves.length > 0) {
+    const overlappingLeaveDetails = overlappingLeaves
+      .map(
+        (leave) =>
+          `*Type:* ${leave.leaveType}\n*From:* ${formatDate(
+            leave.fromDate
+          )}\n*To:* ${formatDate(leave.toDate)}`
+      )
+      .join("\n\n");
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:warning: *Overlapping Leave Detected!*\n\nYou already have an approved leave overlapping with the selected dates:\n\n${overlappingLeaveDetails}`,
+    });
+    return;
+  }
 
   let verificationResult;
 
@@ -421,44 +483,35 @@ const approveLeave = async ({ ack, body, client, action }) => {
     );
     console.log({ leaveDays });
 
+    let remainingLeaveBalance;
+
     if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
+      remainingLeaveBalance = 12 - user.sickLeave;
     } else if (leaveRequest.leaveType === "Burnout") {
       user.burnout = (user.burnout || 0) + leaveDays;
+      remainingLeaveBalance = 6 - user.burnout;
     } else if (leaveRequest.leaveType === "Paternity_Leave") {
       user.paternityLeave = (user.paternityLeave || 0) + leaveDays;
+      remainingLeaveBalance = 20 - user.paternityLeave;
     } else if (leaveRequest.leaveType === "Casual_Leave") {
       user.casualLeave = (user.casualLeave || 0) + leaveDays;
+      remainingLeaveBalance = 6 - user.casualLeave;
     } else if (leaveRequest.leaveType === "Bereavement_Leave") {
       user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
+      remainingLeaveBalance = 5 - user.bereavementLeave;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
       user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
+      remainingLeaveBalance = 6 - user.restrictedHoliday;
     } else if (leaveRequest.leaveType === "Mensural_Leaves") {
       user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
+      remainingLeaveBalance = 18 - user.mensuralLeaves;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       user.maternityLeave = (user.maternityLeave || 0) + leaveDays;
+      remainingLeaveBalance = 13 - user.maternityLeave;
     } else if (leaveRequest.leaveType === "Unpaid_Leave") {
       user.unpaidLeave = (user.unpaidLeave || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "WFH") {
-      user.wfh = (user.wfh || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Sick_Leave") {
-      user.halfSickLeave = (user.halfSickLeave || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Restricted_Holiday") {
-      user.halfRestrictedHoliday =
-        (user.halfRestrictedHoliday || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Burnout") {
-      user.halfBurnout = (user.halfBurnout || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Period_Leaves") {
-      user.halfPeriodLeaves = (user.halfPeriodLeaves || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Compensatory_Leave") {
-      user.halfCompensatoryLeave =
-        (user.halfCompensatoryLeave || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Casual_Leave") {
-      user.halfCasualLeave = (user.halfCasualLeave || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Maternity_Leave") {
-      user.halfMaternityLeave = (user.halfMaternityLeave || 0) + leaveDays;
-    } else if (leaveRequest.leaveType === "Half_Paternity_Leave") {
-      user.halfPaternityLeave = (user.halfPaternityLeave || 0) + leaveDays;
+      remainingLeaveBalance = 20 - user.unpaidLeave;
     }
 
     await user.save();
@@ -472,13 +525,27 @@ const approveLeave = async ({ ack, body, client, action }) => {
 
     await client.chat.postMessage({
       channel: leaveRequest.user,
-      text: `Your leave request from ${leaveRequest.fromDate} to ${leaveRequest.toDate} has been approved! ✅`,
+      text: `Your leave request from ${formatDate(
+        leaveRequest.fromDate
+      )} to ${formatDate(
+        leaveRequest.toDate
+      )} has been approved! ✅\n\n*Remaining ${leaveRequest.leaveType.replace(
+        "_",
+        " "
+      )} Balance:* ${remainingLeaveBalance} days.`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `Your leave request has been *approved*! ✅\n\n*Duration:* ${leaveRequest.fromDate} to ${leaveRequest.toDate}\n*Reason:* ${leaveRequest.reason}`,
+            text: `Your leave request has been *approved*! ✅\n\n*Duration:* ${formatDate(
+              leaveRequest.fromDate
+            )} to ${formatDate(leaveRequest.toDate)}\n*Reason:* ${
+              leaveRequest.reason
+            }\n*Remaining ${leaveRequest.leaveType.replace(
+              "_",
+              " "
+            )} Balance:* ${remainingLeaveBalance} days.`,
           },
         },
       ],
@@ -523,13 +590,19 @@ const rejectLeave = async ({ ack, body, client, action }) => {
 
     await client.chat.postMessage({
       channel: leaveRequest.user,
-      text: `Your leave request from ${leaveRequest.fromDate} to ${leaveRequest.toDate} has been rejected.`,
+      text: `Your leave request from ${formatDate(
+        leaveRequest.fromDate
+      )} to ${formatDate(leaveRequest.toDate)} has been rejected.`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${leaveRequest.fromDate} to ${leaveRequest.toDate}\n\nPlease contact your supervisor for more information.`,
+            text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${formatDate(
+              leaveRequest.fromDate
+            )} to ${formatDate(
+              leaveRequest.toDate
+            )}\n\nPlease contact your lead for more info.`,
           },
         },
       ],
@@ -645,7 +718,9 @@ const onLeave = async ({ command, ack, client, body }) => {
 
     const leaveDetails = leavesToday
       .map((leave) => {
-        return `*User:* <@${leave.user}>\n*From:* ${leave.fromDate}\n*To:* ${leave.toDate}\n*Reason:* ${leave.reason}`;
+        return `*User:* <@${leave.user}>\n*From:* ${formatDate(
+          leave.fromDate
+        )}\n*To:* ${formatDate(leave.toDate)}\n*Reason:* ${leave.reason}`;
       })
       .join("\n\n");
 
@@ -790,7 +865,9 @@ const upcomingLeaves = async ({ command, ack, client, body }) => {
 
     const leaveDetails = upcomingLeaves
       .map((leave) => {
-        return `*User:* <@${leave.user}>\n*From:* ${leave.fromDate}\n*To:* ${leave.toDate}\n*Reason:* ${leave.reason}`;
+        return `*User:* <@${leave.user}>\n*From:* ${formatDate(
+          leave.fromDate
+        )}\n*To:* ${formatDate(leave.toDate)}\n*Reason:* ${leave.reason}`;
       })
       .join("\n\n");
 
