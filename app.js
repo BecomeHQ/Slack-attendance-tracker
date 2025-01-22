@@ -13,6 +13,12 @@ const {
   checkBalance,
   showUpcomingHolidays,
   upcomingLeaves,
+  verifyInternshipLeave,
+  openLeaveTypeModal,
+  handleLeaveTypeSelection,
+  handleSickLeaveSubmission,
+  handleAddMoreDays,
+  handleDateSelectionSubmission,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -48,9 +54,11 @@ const { User } = require("./models/user");
 
 // saveSlackUsers();
 
-app.command("/apply-leave-bot", applyLeave);
+app.command("/apply-leave-bot", openLeaveTypeModal);
 
-app.view("leave_application_modal", leave_application_modal);
+app.view("date_selection_modal", handleDateSelectionSubmission);
+
+app.view("sick_leave_application_modal", handleSickLeaveSubmission);
 
 app.command("/manage-leaves", manageLeaves);
 
@@ -69,6 +77,12 @@ app.command("/check-balance", checkBalance);
 app.command("/upcoming-holidays", showUpcomingHolidays);
 
 app.command("/upcoming-leaves", upcomingLeaves);
+
+app.action(/select_(.*)_leave/, handleLeaveTypeSelection);
+
+app.action("add_more_days_button", handleAddMoreDays);
+
+app.action("date_select", handleDateSelectionSubmission);
 
 (async () => {
   await app.start(process.env.PORT || 1000);

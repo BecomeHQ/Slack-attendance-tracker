@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
   unpaidLeave: { type: Number, default: 0 },
   paternityLeave: { type: Number, default: 0 },
   bereavementLeave: { type: Number, default: 0 },
+  wfhLeave: { type: Number, default: 0 },
+  internshipLeave: { type: Number, default: 0 },
 });
 
 const User = mongoose.model("User", userSchema);

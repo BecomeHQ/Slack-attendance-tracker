@@ -11,13 +11,13 @@ const {
   verifyInternshipLeave,
   verifyPersonalLeave,
   verifyRestrictedHoliday,
+  verifyWFHLeave,
 } = require("../utils/verify");
 const { User } = require("../models/user.js");
 const e = require("express");
 const { Attendance } = require("../models/checkin");
 const { publicHolidaysList, restrictedHolidaysList } = require("../mode.js");
-
-// Utility function to format dates
+const app = require("../utils/slack-instance.js");
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   const options = { day: "numeric", month: "short", year: "numeric" };
@@ -29,50 +29,234 @@ const applyLeave = async ({ command, ack, client, body }) => {
 
   try {
     const userId = body.user_id;
-    const user = await User.findOne({ slackId: userId });
+    const leaveType = command.text;
 
-    if (!user) {
-      await client.chat.postMessage({
-        channel: userId,
-        text: "User not found. Please ensure your Slack ID is registered.",
+    if (leaveType === "Sick_Leave") {
+      await client.views.open({
+        trigger_id: body.trigger_id,
+        view: {
+          type: "modal",
+          callback_id: "sick_leave_application_modal",
+          title: {
+            type: "plain_text",
+            text: "Apply for Sick Leave",
+          },
+          blocks: [
+            {
+              type: "actions",
+              block_id: "add_dates",
+              elements: [
+                {
+                  type: "button",
+                  text: {
+                    type: "plain_text",
+                    text: "Add Dates",
+                  },
+                  action_id: "add_dates_button",
+                },
+              ],
+            },
+            {
+              type: "input",
+              block_id: "leave_type",
+              element: {
+                type: "static_select",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select leave type",
+                },
+                options: [
+                  {
+                    text: {
+                      type: "plain_text",
+                      text: "Full Day",
+                    },
+                    value: "Full_Day",
+                  },
+                  {
+                    text: {
+                      type: "plain_text",
+                      text: "Half Day",
+                    },
+                    value: "Half_Day",
+                  },
+                ],
+                action_id: "leave_type_select",
+              },
+              label: {
+                type: "plain_text",
+                text: "Type",
+              },
+            },
+            {
+              type: "input",
+              block_id: "half_day",
+              element: {
+                type: "static_select",
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select half",
+                },
+                options: [
+                  {
+                    text: {
+                      type: "plain_text",
+                      text: "First Half",
+                    },
+                    value: "First_Half",
+                  },
+                  {
+                    text: {
+                      type: "plain_text",
+                      text: "Second Half",
+                    },
+                    value: "Second_Half",
+                  },
+                ],
+                action_id: "half_day_select",
+              },
+              label: {
+                type: "plain_text",
+                text: "Half Day",
+              },
+              optional: true, // Make this optional
+            },
+            {
+              type: "input",
+              block_id: "reason",
+              element: {
+                type: "plain_text_input",
+                multiline: true,
+                action_id: "reason_input",
+              },
+              label: {
+                type: "plain_text",
+                text: "Reason",
+              },
+            },
+          ],
+          submit: {
+            type: "plain_text",
+            text: "Submit",
+          },
+        },
       });
-      return;
     }
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-    const totalLeaves = {
-      sickLeave: 12,
-      restrictedHoliday: 6,
-      burnout: 6,
-      mensuralLeaves: 18,
-      casualLeave: 6,
-      maternityLeave: 13,
-      unpaidLeave: 20,
-      paternityLeave: 20,
-      bereavementLeave: 5,
-    };
+const handleAddMoreDays = async ({ ack, body, client, action }) => {
+  await ack();
+  try {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "date_selection_modal",
+        title: {
+          type: "plain_text",
+          text: "Select Dates",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 3",
+            },
+            optional: true,
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Done",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error opening add dates modal:", error);
+  }
+};
 
-    const leaveBalances = {
-      sickLeave: totalLeaves.sickLeave - user.sickLeave,
-      restrictedHoliday: totalLeaves.restrictedHoliday - user.restrictedHoliday,
-      burnout: totalLeaves.burnout - user.burnout,
-      mensuralLeaves: totalLeaves.mensuralLeaves - user.mensuralLeaves,
-      casualLeave: totalLeaves.casualLeave - user.casualLeave,
-      maternityLeave: totalLeaves.maternityLeave - user.maternityLeave,
-      unpaidLeave: totalLeaves.unpaidLeave - user.unpaidLeave,
-      paternityLeave: totalLeaves.paternityLeave - user.paternityLeave,
-      bereavementLeave: totalLeaves.bereavementLeave - user.bereavementLeave,
-    };
+const handleDateSelectionSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+  console.log("View ID:", body.view.id);
 
-    const result = await client.views.open({
+  const selectedDates1 = view.state.values.dates_1.date_select_1.selected_date;
+  const selectedDates2 = view.state.values.dates_2.date_select_2.selected_date;
+  const selectedDates3 = view.state.values.dates_3.date_select_3.selected_date;
+
+  const selectedDates = [selectedDates1, selectedDates2, selectedDates3]
+    .filter(Boolean)
+    .join(", ");
+
+  if (!selectedDates) {
+    console.error("No dates selected.");
+    return;
+  }
+  console.log(selectedDates);
+  try {
+    await client.views.open({
       trigger_id: body.trigger_id,
       view: {
         type: "modal",
-        callback_id: "leave_application_modal",
+        callback_id: "sick_leave_application_modal",
         title: {
           type: "plain_text",
-          text: "Apply for Leave",
+          text: "Apply for Sick Leave",
         },
         blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Selected Dates:*\n${selectedDates}`,
+            },
+          },
           {
             type: "input",
             block_id: "leave_type",
@@ -86,105 +270,57 @@ const applyLeave = async ({ command, ack, client, body }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: `Sick Leave (${leaveBalances.sickLeave} remaining)`,
+                    text: "Full Day",
                   },
-                  value: "Sick_Leave",
+                  value: "Full_Day",
                 },
                 {
                   text: {
                     type: "plain_text",
-                    text: `Restricted Holiday (${leaveBalances.restrictedHoliday} remaining)`,
+                    text: "Half Day",
                   },
-                  value: "Restricted_Holiday",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Burnout (${leaveBalances.burnout} remaining)`,
-                  },
-                  value: "Burnout",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Menstrual leave (${leaveBalances.mensuralLeaves} remaining)`,
-                  },
-                  value: "Mensural_Leaves",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Casual Leave (${leaveBalances.casualLeave} remaining)`,
-                  },
-                  value: "Casual_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Maternity Leave (${leaveBalances.maternityLeave} remaining)`,
-                  },
-                  value: "Maternity_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Paternity Leave (${leaveBalances.paternityLeave} remaining)`,
-                  },
-                  value: "Paternity_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Bereavement Leave (${leaveBalances.bereavementLeave} remaining)`,
-                  },
-                  value: "Bereavement_Leave",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: `Unpaid Leave (${leaveBalances.unpaidLeave} remaining)`,
-                  },
-                  value: "Unpaid_Leave",
+                  value: "Half_Day",
                 },
               ],
               action_id: "leave_type_select",
             },
             label: {
               type: "plain_text",
-              text: "Leave Type",
+              text: "Type",
             },
           },
           {
             type: "input",
-            block_id: "dates",
+            block_id: "half_day",
             element: {
-              type: "datepicker",
+              type: "static_select",
               placeholder: {
                 type: "plain_text",
-                text: "Select start date",
+                text: "Select half",
               },
-              action_id: "start_date",
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select",
             },
             label: {
               type: "plain_text",
-              text: "Start Date",
+              text: "Half Day",
             },
-          },
-          {
-            type: "input",
-            block_id: "end_dates",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select end date",
-              },
-              action_id: "end_date",
-            },
-            label: {
-              type: "plain_text",
-              text: "End Date",
-            },
+            optional: true,
           },
           {
             type: "input",
@@ -207,7 +343,7 @@ const applyLeave = async ({ command, ack, client, body }) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error opening modal with selected dates:", error);
   }
 };
 
@@ -293,6 +429,9 @@ const leave_application_modal = async ({ ack, body, view, client }) => {
       break;
     case "Personal_Leave":
       verificationResult = await verifyPersonalLeave(user, fromDate, toDate);
+      break;
+    case "WFH_Leave":
+      verificationResult = await verifyWFHLeave(user, fromDate, toDate);
       break;
     default:
       verificationResult = { isValid: false, message: "Invalid leave type." };
@@ -466,7 +605,6 @@ const approveLeave = async ({ ack, body, client, action }) => {
       { status: "Approved" },
       { new: true }
     );
-    console.log(leaveRequest);
 
     if (!leaveRequest) {
       throw new Error("Leave request not found");
@@ -481,37 +619,75 @@ const approveLeave = async ({ ack, body, client, action }) => {
       leaveRequest.fromDate,
       leaveRequest.toDate
     );
-    console.log({ leaveDays });
 
-    let remainingLeaveBalance;
+    let approvalMessage = `Your leave request from ${formatDate(
+      leaveRequest.fromDate
+    )} to ${formatDate(
+      leaveRequest.toDate
+    )} has been approved! ✅\n\n*Remaining ${leaveRequest.leaveType.replace(
+      "_",
+      " "
+    )} Balance:* `;
 
     if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
       remainingLeaveBalance = 12 - user.sickLeave;
+      approvalMessage = `🤒 Your sick leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!`;
     } else if (leaveRequest.leaveType === "Burnout") {
       user.burnout = (user.burnout || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.burnout;
+      approvalMessage = `🧠 Your burnout leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!`;
     } else if (leaveRequest.leaveType === "Paternity_Leave") {
       user.paternityLeave = (user.paternityLeave || 0) + leaveDays;
       remainingLeaveBalance = 20 - user.paternityLeave;
+      approvalMessage = `🍼 Your paternity leave starting ${formatDate(
+        leaveRequest.fromDate
+      )} is approved! Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.`;
     } else if (leaveRequest.leaveType === "Casual_Leave") {
       user.casualLeave = (user.casualLeave || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.casualLeave;
+      approvalMessage = `🌼 Your casual leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved! Wishing you a peaceful and refreshing break. Enjoy your time off!`;
     } else if (leaveRequest.leaveType === "Bereavement_Leave") {
       user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
       remainingLeaveBalance = 5 - user.bereavementLeave;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
       user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.restrictedHoliday;
+      approvalMessage = `🌴 Your leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved! Hope you make the most of your break. Take this time to relax and recharge!`;
     } else if (leaveRequest.leaveType === "Mensural_Leaves") {
       user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
       remainingLeaveBalance = 18 - user.mensuralLeaves;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       user.maternityLeave = (user.maternityLeave || 0) + leaveDays;
-      remainingLeaveBalance = 13 - user.maternityLeave;
+      remainingLeaveBalance = 65 - user.maternityLeave;
+      approvalMessage = `👶 Your maternity leave starting ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. Wishing you a joyful and safe journey into motherhood. We can't wait to meet your little one someday!`;
     } else if (leaveRequest.leaveType === "Unpaid_Leave") {
       user.unpaidLeave = (user.unpaidLeave || 0) + leaveDays;
       remainingLeaveBalance = 20 - user.unpaidLeave;
+      approvalMessage = `📝 Your unpaid leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.`;
+    } else if (leaveRequest.leaveType === "WFH_Leave") {
+      user.wfhLeave = (user.wfhLeave || 0) + leaveDays;
+      remainingLeaveBalance = 4 - user.wfhLeave;
+      approvalMessage = `🏡 Your WFH day for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved! Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!`;
+    } else if (leaveRequest.leaveType === "Internship_Leave") {
+      user.internshipLeave = (user.internshipLeave || 0) + leaveDays;
+      approvalMessage = `📚 Your leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. Take your well-deserved break!`;
     }
 
     await user.save();
@@ -525,27 +701,13 @@ const approveLeave = async ({ ack, body, client, action }) => {
 
     await client.chat.postMessage({
       channel: leaveRequest.user,
-      text: `Your leave request from ${formatDate(
-        leaveRequest.fromDate
-      )} to ${formatDate(
-        leaveRequest.toDate
-      )} has been approved! ✅\n\n*Remaining ${leaveRequest.leaveType.replace(
-        "_",
-        " "
-      )} Balance:* ${remainingLeaveBalance} days.`,
+      text: approvalMessage,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `Your leave request has been *approved*! ✅\n\n*Duration:* ${formatDate(
-              leaveRequest.fromDate
-            )} to ${formatDate(leaveRequest.toDate)}\n*Reason:* ${
-              leaveRequest.reason
-            }\n*Remaining ${leaveRequest.leaveType.replace(
-              "_",
-              " "
-            )} Balance:* ${remainingLeaveBalance} days.`,
+            text: approvalMessage,
           },
         },
       ],
@@ -884,6 +1046,457 @@ const upcomingLeaves = async ({ command, ack, client, body }) => {
   }
 };
 
+const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
+  await ack();
+
+  if (action.action_id === "select_sick_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Leave",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date",
+            },
+          },
+          {
+            type: "actions",
+            block_id: "add_more_days",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Add More Days",
+                },
+                action_id: "add_more_days_button",
+              },
+            ],
+          },
+          {
+            type: "section",
+            block_id: "leave_description",
+            text: {
+              type: "mrkdwn",
+              text: "_Can avail immediately. Leaves more than 3 days, need a certification._",
+            },
+          },
+          {
+            type: "input",
+            block_id: "leave_type",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+          },
+          {
+            type: "input",
+            block_id: "half_day",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
+  }
+};
+
+const openLeaveTypeModal = async ({ command, ack, client, body }) => {
+  await ack();
+
+  try {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "leave_type_selection_modal",
+        title: {
+          type: "plain_text",
+          text: "Select Leave Type",
+        },
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "Choose the type of leave you want to apply for:",
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Sick Leave",
+                },
+                action_id: "select_sick_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Casual Leave",
+                },
+                action_id: "select_casual_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Burnout Leave",
+                },
+                action_id: "select_burnout_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Mensural Leave",
+                },
+                action_id: "select_mensural_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Maternity Leave",
+                },
+                action_id: "select_maternity_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Paternity Leave",
+                },
+                action_id: "select_paternity_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Bereavement Leave",
+                },
+                action_id: "select_bereavement_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Unpaid Leave",
+                },
+                action_id: "select_unpaid_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Internship Leave",
+                },
+                action_id: "select_internship_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Personal Leave",
+                },
+                action_id: "select_personal_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Restricted Holiday",
+                },
+                action_id: "select_restricted_holiday",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "WFH Leave",
+                },
+                action_id: "select_wfh_leave",
+              },
+            ],
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("Error opening leave type modal:", error);
+  }
+};
+
+const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+
+  const user = body.user.id;
+  const selectedDates =
+    view.state.values.dates.date_select.selected_options.map(
+      (option) => option.value
+    );
+  const leaveType =
+    view.state.values.leave_type.leave_type_select.selected_option.value;
+  const halfDay =
+    leaveType === "Half_Day"
+      ? view.state.values.half_day.half_day_select.selected_option.value
+      : null;
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  for (const date of selectedDates) {
+    console.log(
+      `User: ${user}, Date: ${date}, Type: ${leaveType}, Half: ${halfDay}, Reason: ${reason}`
+    );
+  }
+
+  await client.chat.postMessage({
+    channel: user,
+    text: `Your sick leave request for the selected dates has been submitted.`,
+  });
+};
+
+const openSickLeaveModal = async ({ ack, body, client }) => {
+  await ack();
+
+  try {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "sick_leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Sick Leave",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date",
+            },
+          },
+          {
+            type: "input",
+            block_id: "leave_type",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+          },
+          {
+            type: "input",
+            block_id: "half_day",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true, // Make this optional
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error opening sick leave modal:", error);
+  }
+};
+
+const openTestModal = async ({ ack, body, client }) => {
+  await ack();
+  try {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "test_modal",
+        title: {
+          type: "plain_text",
+          text: "Test Modal",
+        },
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "This is a test modal.",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Close",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error opening test modal:", error);
+  }
+};
+
 module.exports = {
   leave_application_modal,
   applyLeave,
@@ -896,4 +1509,11 @@ module.exports = {
   checkBalance,
   showUpcomingHolidays,
   upcomingLeaves,
+  handleLeaveTypeSelection,
+  openLeaveTypeModal,
+  handleSickLeaveSubmission,
+  openSickLeaveModal,
+  openTestModal,
+  handleAddMoreDays,
+  handleDateSelectionSubmission,
 };

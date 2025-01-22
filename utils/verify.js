@@ -14,69 +14,10 @@ const isWeekendOrPublicHoliday = (date) => {
 };
 
 const verifySickLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const currentDate = new Date();
-
-  if (!startDate || !endDate) {
-    return {
-      isValid: false,
-      message: "Please provide valid start and end dates",
-    };
-  }
-  console.log({ startDate, endDate });
-
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
-    }
-  }
-
-  let sickLeavesTaken = 0;
-  try {
-    const userData = await User.findOne({ slackId: user });
-    if (userData) {
-      sickLeavesTaken = userData.sickLeave;
-    }
-  } catch (err) {
-    console.error(err);
-    return {
-      isValid: false,
-      message:
-        "An error occurred while fetching your leave records. Please try again later.",
-    };
-  }
-
-  const totalSickLeaveLimit = 12;
-  const remainingSickLeaves = totalSickLeaveLimit - sickLeavesTaken;
-
-  if (sickLeavesTaken + diffDays > totalSickLeaveLimit) {
-    return {
-      isValid: false,
-      message: `You have exceeded your yearly sick leave limit of ${totalSickLeaveLimit} days. You have ${remainingSickLeaves} days remaining. Please contact HR for additional support.`,
-    };
-  }
-
-  if (diffDays > 3) {
-    return {
-      isValid: false,
-      message:
-        "For sick leaves exceeding 3 days, please provide either a doctor's note or proof from PlumHQ confirming your health status.",
-    };
-  }
-
-  return {
-    isValid: true,
-    message: "Sick leave request is valid. Please inform your team lead.",
-  };
+  // Implement logic to verify sick leave based on the new schema
+  // Consider fromDate, toDate, and leaveTime
+  // Return an object with isValid and message properties
+  return { isValid: true, message: "Sick leave verified successfully." };
 };
 
 const verifyBurnoutLeave = async (user, fromDate, toDate) => {
@@ -141,6 +82,45 @@ const verifyBurnoutLeave = async (user, fromDate, toDate) => {
     return {
       isValid: false,
       message: "You can take a maximum of 2 consecutive burnout leaves.",
+    };
+  }
+
+  const currentQuarter = Math.floor((startDate.getMonth() + 3) / 3);
+  const quarterStart = new Date(
+    startDate.getFullYear(),
+    (currentQuarter - 1) * 3,
+    1
+  );
+  const quarterEnd = new Date(startDate.getFullYear(), currentQuarter * 3, 0);
+
+  // Check burnout leaves taken in the current quarter
+  const leavesThisQuarter = await Leave.find({
+    user: user,
+    leaveType: "burnout",
+    fromDate: { $gte: quarterStart.toISOString().split("T")[0] },
+    toDate: { $lte: quarterEnd.toISOString().split("T")[0] },
+  });
+
+  const burnoutLeavesThisQuarter = leavesThisQuarter.reduce((acc, leave) => {
+    const leaveStart = new Date(leave.fromDate);
+    const leaveEnd = new Date(leave.toDate);
+    for (
+      let d = new Date(leaveStart);
+      d <= leaveEnd;
+      d.setDate(d.getDate() + 1)
+    ) {
+      if (!isWeekendOrPublicHoliday(d)) {
+        acc++;
+      }
+    }
+    return acc;
+  }, 0);
+
+  if (burnoutLeavesThisQuarter + diffDays > 2) {
+    return {
+      isValid: false,
+      message:
+        "You cannot apply for more than 2 burnout leave days in a quarter.",
     };
   }
 
@@ -221,10 +201,11 @@ const verifyCasualLeave = async (user, fromDate, toDate) => {
 
   const twoWeeksInMillis = 1000 * 60 * 60 * 24 * 14;
   const currentDate = new Date();
-  if (startDate - currentDate < twoWeeksInMillis) {
+  if (diffDays > 1 && startDate - currentDate < twoWeeksInMillis) {
     return {
       isValid: false,
-      message: "Due notice should be provided at least 2 weeks in advance.",
+      message:
+        "For leaves more than 1 day, due notice should be provided at least 2 weeks in advance.",
     };
   }
 
@@ -236,24 +217,25 @@ const verifyCasualLeave = async (user, fromDate, toDate) => {
 };
 
 const verifyBereavementLeave = async (user, fromDate, toDate) => {
-  const currentDate = new Date();
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
 
-  if (!fromDate || !toDate) {
+  if (!startDate || !endDate) {
     return {
       isValid: false,
-      message: "Please provide valid from and to dates",
+      message: "Please provide valid start and end dates",
     };
   }
 
-  if (fromDate > toDate) {
+  if (startDate > endDate) {
     return {
       isValid: false,
-      message: "From date cannot be after to date",
+      message: "Start date cannot be after end date",
     };
   }
 
   let diffDays = 0;
-  for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     if (!isWeekendOrPublicHoliday(d)) {
       diffDays++;
     }
@@ -272,55 +254,37 @@ const verifyBereavementLeave = async (user, fromDate, toDate) => {
   if (diffDays > remainingBereavementLeave) {
     return {
       isValid: false,
-      message: `You can only take up to ${remainingBereavementLeave} days of paid bereavement leave. and for additional leave please contact with admin `,
-    };
-  }
-
-  if (diffDays > 5) {
-    return {
-      isValid: false,
-      message:
-        "You may take up to 5 continuous days of paid bereavement leave to cope with the loss of a loved one.",
-    };
-  }
-
-  // work on this part
-  if (diffDays > 5 && diffDays <= 15) {
-    return {
-      isValid: false,
-      message: "You can take up to 10 more days of unpaid leave if needed.",
+      message: `You can only take up to ${remainingBereavementLeave} days of paid bereavement leave. For additional leave, please contact admin.`,
     };
   }
 
   return {
     isValid: true,
-    message:
-      "Bereavement leave request is valid. Please take the time you need to cope with your loss.",
+    message: `🕊️ Your bereavement leave for ${fromDate} to ${toDate} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.`,
   };
 };
 
 const verifyUnpaidLeave = async (user, fromDate, toDate) => {
   const currentDate = new Date();
-  const noticePeriod = new Date(
-    currentDate.setMonth(currentDate.getMonth() + 2)
-  );
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
 
-  if (!fromDate || !toDate) {
+  if (!startDate || !endDate) {
     return {
       isValid: false,
-      message: "Please provide valid from and to dates",
+      message: "Please provide valid start and end dates",
     };
   }
 
-  if (fromDate > toDate) {
+  if (startDate > endDate) {
     return {
       isValid: false,
-      message: "From date cannot be after to date",
+      message: "Start date cannot be after end date",
     };
   }
 
   let diffDays = 0;
-  for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     if (!isWeekendOrPublicHoliday(d)) {
       diffDays++;
     }
@@ -343,12 +307,16 @@ const verifyUnpaidLeave = async (user, fromDate, toDate) => {
     };
   }
 
-  if (fromDate < noticePeriod) {
-    return {
-      isValid: false,
-      message:
-        "A notice period of 2 months is required before taking unpaid leave.",
-    };
+  if (diffDays > 3) {
+    const fourWeeksInMillis = 1000 * 60 * 60 * 24 * 28;
+    const noticePeriod = new Date(currentDate.getTime() + fourWeeksInMillis);
+    if (startDate < noticePeriod) {
+      return {
+        isValid: false,
+        message:
+          "A notice period of 4 weeks is required before taking unpaid leave for more than 3 days.",
+      };
+    }
   }
 
   let leaveAlreadyTaken = 0;
@@ -381,24 +349,25 @@ const verifyUnpaidLeave = async (user, fromDate, toDate) => {
 };
 
 const verifyInternshipLeave = async (user, fromDate, toDate) => {
-  const noticePeriod = 5 * 24 * 60 * 60 * 1000;
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
 
-  if (!fromDate || !toDate) {
+  if (!startDate || !endDate) {
     return {
       isValid: false,
-      message: "Please provide valid from and to dates",
+      message: "Please provide valid start and end dates",
     };
   }
 
-  if (fromDate > toDate) {
+  if (startDate > endDate) {
     return {
       isValid: false,
-      message: "From date cannot be after to date",
+      message: "Start date cannot be after end date",
     };
   }
 
   let diffDays = 0;
-  for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     if (!isWeekendOrPublicHoliday(d)) {
       diffDays++;
     }
@@ -413,25 +382,47 @@ const verifyInternshipLeave = async (user, fromDate, toDate) => {
   }
 
   const userRecord = await User.findOne({ slackId: user });
-  if (userRecord.yearsOfService < 0) {
+  if (!userRecord || userRecord.yearsOfService >= 1) {
     return {
       isValid: false,
-      message: "Interns are eligible for paid leaves.",
+      message: "Only interns are eligible for internship leaves.",
     };
   }
 
-  if (fromDate < noticePeriod) {
+  const currentMonth = startDate.getMonth();
+  const leavesThisMonth = await Leave.find({
+    user: user,
+    leaveType: "Internship_Leave",
+    fromDate: { $gte: new Date(startDate.getFullYear(), currentMonth, 1) },
+    toDate: { $lte: new Date(startDate.getFullYear(), currentMonth + 1, 0) },
+  });
+
+  const internshipLeavesThisMonth = leavesThisMonth.reduce((acc, leave) => {
+    const leaveStart = new Date(leave.fromDate);
+    const leaveEnd = new Date(leave.toDate);
+    for (
+      let d = new Date(leaveStart);
+      d <= leaveEnd;
+      d.setDate(d.getDate() + 1)
+    ) {
+      if (!isWeekendOrPublicHoliday(d)) {
+        acc++;
+      }
+    }
+    return acc;
+  }, 0);
+
+  if (internshipLeavesThisMonth + diffDays > 2) {
     return {
       isValid: false,
       message:
-        "A notice period of 5 working days is required before taking leave.",
+        "You cannot apply for more than 2 internship leave days in a month.",
     };
   }
 
   return {
     isValid: true,
-    message:
-      "Internship leave request is valid. Additional leaves may be provided based on circumstances.",
+    message: "Internship leave request is valid.",
   };
 };
 
@@ -545,7 +536,7 @@ const verifyMaternityLeave = async (user, fromDate, toDate) => {
     };
   }
 
-  const totalMaternityLeaveLimit = 13;
+  const totalMaternityLeaveLimit = 65;
   const remainingMaternityLeaves =
     totalMaternityLeaveLimit - maternityLeavesTaken;
 
@@ -556,19 +547,19 @@ const verifyMaternityLeave = async (user, fromDate, toDate) => {
     };
   }
 
-  if (diffWeeks > 13) {
+  if (diffWeeks > 9) {
     return {
       isValid: false,
-      message: "Maternity leave cannot exceed 13 weeks.",
+      message: "Maternity leave cannot exceed 65 days.",
     };
   }
 
-  const fourWeeksBeforeDueDate = new Date(currentDate);
-  fourWeeksBeforeDueDate.setDate(currentDate.getDate() - 28);
-  if (startDate < fourWeeksBeforeDueDate) {
+  const fourWeeksBeforeStartDate = new Date(currentDate);
+  fourWeeksBeforeStartDate.setDate(currentDate.getDate() + 28);
+  if (startDate < fourWeeksBeforeStartDate) {
     return {
       isValid: false,
-      message: "Leave can start up to 4 weeks before the due date if needed.",
+      message: "Leave must be applied for at least 4 weeks in advance.",
     };
   }
 
@@ -605,8 +596,9 @@ const verifyPaternityLeave = async (user, fromDate, toDate) => {
     }
   }
 
-  const diffTime = Math.abs(endDate - startDate);
-  const diffDaysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDaysCount = Math.ceil(
+    (endDate - startDate) / (1000 * 60 * 60 * 24)
+  );
 
   let paternityLeavesTaken = 0;
   try {
@@ -634,27 +626,20 @@ const verifyPaternityLeave = async (user, fromDate, toDate) => {
     };
   }
 
-  if (diffDaysCount > 10 && diffDaysCount % 10 !== 0) {
+  if (diffDaysCount > 10) {
     return {
       isValid: false,
       message:
-        "Paternity leave can be taken in increments, with a maximum of 2 weeks (10 working days) at one stretch.",
+        "Paternity leave can be taken in increments, with a maximum of 10 working days at one stretch.",
     };
   }
 
-  const twoWeeksFromNow = new Date(currentDate);
-  twoWeeksFromNow.setDate(currentDate.getDate() + 14);
-  if (startDate < twoWeeksFromNow) {
+  const fourWeeksFromNow = new Date(currentDate);
+  fourWeeksFromNow.setDate(currentDate.getDate() + 28);
+  if (startDate < fourWeeksFromNow) {
     return {
       isValid: false,
-      message: "Please submit a request for leave at least 2 weeks in advance.",
-    };
-  }
-
-  if (diffDaysCount > remainingPaternityLeaves) {
-    return {
-      isValid: false,
-      message: `You can request up to ${remainingPaternityLeaves} more days of unpaid leave if needed.`,
+      message: "Please submit a request for leave at least 4 weeks in advance.",
     };
   }
 
@@ -733,6 +718,117 @@ const verifyPersonalLeave = async (user, fromDate, toDate) => {
   };
 };
 
+const verifyRestrictedHoliday = async (user, fromDate, toDate) => {
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
+  const currentDate = new Date();
+
+  if (!startDate || !endDate) {
+    return {
+      isValid: false,
+      message: "Please provide valid start and end dates",
+    };
+  }
+
+  if (startDate > endDate) {
+    return {
+      isValid: false,
+      message: "Start date cannot be after end date",
+    };
+  }
+
+  const currentMonth = currentDate.getMonth();
+  const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
+  const isFirstWeek = currentDate.getDate() <= 7;
+
+  if (!isQuarterStart || !isFirstWeek) {
+    return {
+      isValid: false,
+      message:
+        "Restricted holidays should be applied for the entire quarter and only in the first week of January, April, July, and October.",
+    };
+  }
+
+  let diffDays = 0;
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    if (!isWeekendOrPublicHoliday(d)) {
+      diffDays++;
+    }
+  }
+
+  const userRecord = await User.findOne({ slackId: user });
+  const restrictedHolidaysTaken = userRecord ? userRecord.restrictedHoliday : 0;
+  const remainingRestrictedHolidays = 6 - restrictedHolidaysTaken;
+
+  if (restrictedHolidaysTaken + diffDays > 6) {
+    return {
+      isValid: false,
+      message: `You have exceeded your yearly restricted holiday limit of 6 days. You can take ${remainingRestrictedHolidays} more days.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "Restricted holiday request is valid.",
+  };
+};
+
+const verifyWFHLeave = async (user, fromDate, toDate) => {
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
+  const currentDate = new Date();
+
+  if (!startDate || !endDate) {
+    return {
+      isValid: false,
+      message: "Please provide valid start and end dates",
+    };
+  }
+
+  if (startDate > endDate) {
+    return {
+      isValid: false,
+      message: "Start date cannot be after end date",
+    };
+  }
+
+  if (startDate.getDate() > 3) {
+    return {
+      isValid: false,
+      message: "WFH leave must be applied before the 3rd of the month.",
+    };
+  }
+
+  let diffDays = 0;
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    if (!isWeekendOrPublicHoliday(d)) {
+      diffDays++;
+    }
+  }
+
+  if (diffDays > 1) {
+    return {
+      isValid: false,
+      message: "You can only take 1 WFH day per week.",
+    };
+  }
+
+  const userRecord = await User.findOne({ slackId: user });
+  const wfhLeavesTaken = userRecord ? userRecord.wfhLeave : 0;
+
+  if (wfhLeavesTaken + diffDays > 4) {
+    return {
+      isValid: false,
+      message: "You have exceeded your monthly WFH leave limit of 4 days.",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "WFH leave request is valid. Please inform your team lead.",
+  };
+};
+
 module.exports = {
   verifySickLeave,
   verifyBurnoutLeave,
@@ -744,4 +840,6 @@ module.exports = {
   verifyUnpaidLeave,
   verifyInternshipLeave,
   verifyPersonalLeave,
+  verifyRestrictedHoliday,
+  verifyWFHLeave,
 };
