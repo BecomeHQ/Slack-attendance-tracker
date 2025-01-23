@@ -20,6 +20,8 @@ const {
   handleAddMoreDays,
   handleDateSelectionSubmission,
   handleCasualLeaveSubmission,
+  handleMensuralLeaveSubmission,
+  handleUnpaidLeaveSubmission,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -62,6 +64,10 @@ app.view("date_selection_modal", handleDateSelectionSubmission);
 app.view("sick_leave_application_modal", handleSickLeaveSubmission);
 
 app.view("casual_leave_application_modal", handleCasualLeaveSubmission);
+
+app.view("mensural_leave_application_modal", handleMensuralLeaveSubmission);
+
+app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
 
 app.command("/manage-leaves", manageLeaves);
 
