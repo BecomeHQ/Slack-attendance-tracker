@@ -22,6 +22,8 @@ const {
   handleCasualLeaveSubmission,
   handleMensuralLeaveSubmission,
   handleUnpaidLeaveSubmission,
+  handleBurnoutLeaveSubmission,
+  handleWorkFromHomeSubmission,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -65,6 +67,8 @@ app.view("sick_leave_application_modal", handleSickLeaveSubmission);
 
 app.view("casual_leave_application_modal", handleCasualLeaveSubmission);
 
+app.view("burnout_leave_application_modal", handleBurnoutLeaveSubmission);
+
 app.view("mensural_leave_application_modal", handleMensuralLeaveSubmission);
 
 app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
@@ -92,6 +96,9 @@ app.action(/select_(.*)_leave/, handleLeaveTypeSelection);
 app.action("add_more_days_button", handleAddMoreDays);
 
 app.action("date_select", handleDateSelectionSubmission);
+
+// app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
+app.view("work_from_home_application_modal", handleWorkFromHomeSubmission);
 
 (async () => {
   await app.start(process.env.PORT || 1000);

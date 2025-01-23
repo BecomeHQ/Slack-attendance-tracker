@@ -60,144 +60,44 @@ const verifySickLeave = async (
   };
 };
 
-const verifyBurnoutLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const currentDate = new Date();
-
-  if (!startDate || !endDate) {
-    return {
-      isValid: false,
-      message: "Please provide valid start and end dates",
-    };
+const verifyBurnoutLeave = async (user, selectedDates, reason) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return { isValid: false, message: "No dates provided for burnout leave." };
   }
 
-  if (startDate < currentDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be in the past.",
-    };
-  }
-
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
-    }
-  }
-
-  let burnoutLeavesTaken = 0;
-  let remainingBurnoutLeaves = 6;
-  try {
-    const userData = await User.findOne({ slackId: user });
-    if (userData) {
-      burnoutLeavesTaken = userData.burnout;
-      remainingBurnoutLeaves -= burnoutLeavesTaken;
-    }
-  } catch (err) {
-    console.error(err);
+  if (selectedDates.length > 2) {
     return {
       isValid: false,
       message:
-        "An error occurred while fetching your leave records. Please try again later.",
+        "You can only take a maximum of 2 consecutive burnout leave days.",
     };
   }
 
-  const totalBurnoutLeavesRequested = burnoutLeavesTaken + diffDays;
-  if (totalBurnoutLeavesRequested > 6) {
-    return {
-      isValid: false,
-      message: `You have exceeded your yearly burnout leave limit of 6 days. You can apply for ${remainingBurnoutLeaves} more days. Please contact HR for additional support.`,
-    };
+  const formattedDates = selectedDates.map((date) => new Date(date));
+  console.log("Formatted Dates for Verification:", formattedDates);
+
+  for (const date of formattedDates) {
+    if (isWeekendOrPublicHoliday(date)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
   }
 
-  if (diffDays > 2) {
-    return {
-      isValid: false,
-      message: "You can take a maximum of 2 consecutive burnout leaves.",
-    };
-  }
-
-  const currentQuarter = Math.floor((startDate.getMonth() + 3) / 3);
-  const quarterStart = new Date(
-    startDate.getFullYear(),
-    (currentQuarter - 1) * 3,
-    1
+  console.log(
+    `Burnout leave requested for the following dates: ${formattedDates
+      .map((date) => date.toISOString().split("T")[0])
+      .join(", ")}`
   );
-  const quarterEnd = new Date(startDate.getFullYear(), currentQuarter * 3, 0);
 
-  const leavesThisQuarter = await Leave.find({
-    user: user,
-    leaveType: "burnout",
-    fromDate: { $gte: quarterStart.toISOString().split("T")[0] },
-    toDate: { $lte: quarterEnd.toISOString().split("T")[0] },
-  });
-
-  const burnoutLeavesThisQuarter = leavesThisQuarter.reduce((acc, leave) => {
-    const leaveStart = new Date(leave.fromDate);
-    const leaveEnd = new Date(leave.toDate);
-    for (
-      let d = new Date(leaveStart);
-      d <= leaveEnd;
-      d.setDate(d.getDate() + 1)
-    ) {
-      if (!isWeekendOrPublicHoliday(d)) {
-        acc++;
-      }
-    }
-    return acc;
-  }, 0);
-
-  if (burnoutLeavesThisQuarter + diffDays > 2) {
-    return {
-      isValid: false,
-      message:
-        "You cannot apply for more than 2 burnout leave days in a quarter.",
-    };
-  }
-
-  const oneDayBeforeStartDate = new Date(startDate);
-  oneDayBeforeStartDate.setDate(oneDayBeforeStartDate.getDate() - 1);
-  const formattedOneDayBeforeStartDate = oneDayBeforeStartDate
-    .toISOString()
-    .split("T")[0];
-
-  const oneDayAfterEndDate = new Date(endDate);
-  oneDayAfterEndDate.setDate(oneDayAfterEndDate.getDate() + 1);
-  const formattedOneDayAfterEndDate = oneDayAfterEndDate
-    .toISOString()
-    .split("T")[0];
-
-  const overlappingLeaves = await Leave.find({
-    user: user,
-    status: "Approved",
-    fromDate: {
-      $gte: formattedOneDayBeforeStartDate,
-      $lt: formattedOneDayAfterEndDate,
-    },
-    toDate: {
-      $gte: formattedOneDayBeforeStartDate,
-      $lt: formattedOneDayAfterEndDate,
-    },
-  });
-
-  if (overlappingLeaves.length > 0) {
-    return {
-      isValid: false,
-      message: "Burnout leaves cannot be clubbed with other leaves.",
-    };
-  }
+  // Additional logic for verifying burnout leave can be added here
 
   return {
     isValid: true,
-    message: "Burnout leave request is valid. Please inform your team lead.",
+    message: "Burnout leave verified successfully.",
   };
 };
 

@@ -153,15 +153,14 @@ const applyLeave = async ({ command, ack, client, body }) => {
   }
 };
 
-const openLeaveTypeModal = async ({ command, ack, client, body }) => {
+const openLeaveTypeModal = async ({ ack, body, client }) => {
   await ack();
-
   try {
     await client.views.open({
       trigger_id: body.trigger_id,
       view: {
         type: "modal",
-        callback_id: "leave_type_selection_modal",
+        callback_id: "leave_type_modal",
         title: {
           type: "plain_text",
           text: "Select Leave Type",
@@ -171,7 +170,7 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: "Choose the type of leave you want to apply for:",
+              text: "Please select the type of leave you want to apply for:",
             },
           },
           {
@@ -183,6 +182,7 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
                   type: "plain_text",
                   text: "Sick Leave",
                 },
+                value: "sick_leave",
                 action_id: "select_sick_leave",
               },
               {
@@ -191,7 +191,17 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
                   type: "plain_text",
                   text: "Casual Leave",
                 },
+                value: "casual_leave",
                 action_id: "select_casual_leave",
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Burnout Leave",
+                },
+                value: "burnout_leave",
+                action_id: "select_burnout_leave",
               },
               {
                 type: "button",
@@ -199,31 +209,8 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
                   type: "plain_text",
                   text: "Mensural Leave",
                 },
+                value: "mensural_leave",
                 action_id: "select_mensural_leave",
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Maternity Leave",
-                },
-                action_id: "select_maternity_leave",
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Paternity Leave",
-                },
-                action_id: "select_paternity_leave",
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Bereavement Leave",
-                },
-                action_id: "select_bereavement_leave",
               },
               {
                 type: "button",
@@ -231,6 +218,7 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
                   type: "plain_text",
                   text: "Unpaid Leave",
                 },
+                value: "unpaid_leave",
                 action_id: "select_unpaid_leave",
               },
               {
@@ -239,31 +227,17 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
                   type: "plain_text",
                   text: "Internship Leave",
                 },
+                value: "internship_leave",
                 action_id: "select_internship_leave",
               },
               {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Personal Leave",
+                  text: "Work-from-Home Leave",
                 },
-                action_id: "select_personal_leave",
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Restricted Holiday",
-                },
-                action_id: "select_restricted_holiday",
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "WFH Leave",
-                },
-                action_id: "select_wfh_leave",
+                value: "workfrom_home_leave",
+                action_id: "select_workhome_leave",
               },
             ],
           },
@@ -936,8 +910,9 @@ const rejectLeave = async ({ ack, body, client, action }) => {
   }
 };
 
-const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
+const handleLeaveTypeSelection = async ({ ack, body, client }) => {
   await ack();
+  const action = body.actions[0];
 
   if (action.action_id === "select_sick_leave") {
     await client.views.update({
@@ -947,7 +922,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
         callback_id: "sick_leave_application_modal",
         title: {
           type: "plain_text",
-          text: "Apply for Leave",
+          text: "Apply for Sick Leave",
         },
         blocks: [
           {
@@ -1497,6 +1472,70 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
         },
       },
     });
+  } else if (action.action_id === "select_burnout_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "burnout_leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Burnout Leave",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
   } else if (action.action_id === "select_mensural_leave") {
     await client.views.update({
       view_id: body.view.id,
@@ -1553,7 +1592,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
             },
             label: {
               type: "plain_text",
-              text: "Type",
+              text: "Leave Type",
             },
             optional: true,
           },
@@ -1636,7 +1675,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
             },
             label: {
               type: "plain_text",
-              text: "Type",
+              text: "Leave Type",
             },
             optional: true,
           },
@@ -1719,7 +1758,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
             },
             label: {
               type: "plain_text",
-              text: "Type",
+              text: "Leave Type",
             },
             optional: true,
           },
@@ -1794,80 +1833,14 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select date",
+                text: "Select start date",
               },
               action_id: "date_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Date 1",
+              text: "Start Date",
             },
-          },
-          {
-            type: "input",
-            block_id: "leave_type_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
           },
           {
             type: "input",
@@ -1876,166 +1849,62 @@ const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select date",
+                text: "Select end date",
               },
               action_id: "date_select_2",
             },
             label: {
               type: "plain_text",
-              text: "Date 2",
+              text: "End Date",
             },
             optional: true,
           },
           {
             type: "input",
-            block_id: "leave_type_2",
+            block_id: "reason",
             element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_2",
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
             },
             label: {
               type: "plain_text",
-              text: "Type",
+              text: "Reason",
             },
-            optional: true,
           },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
+  } else if (action.action_id === "select_workhome_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "work_from_home_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Unpaid Leave",
+        },
+        blocks: [
           {
             type: "input",
-            block_id: "half_day_2",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "dates_3",
+            block_id: "date",
             element: {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select a date",
-                emoji: true,
+                text: "Select date",
               },
-              action_id: "date_select_3",
+              action_id: "date_select",
             },
             label: {
               type: "plain_text",
-              text: "Date 3",
-              emoji: true,
+              text: "Date",
             },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "leave_type_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
           },
           {
             type: "input",
@@ -3085,6 +2954,199 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
+const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+
+  const user = body.user.id;
+
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2.date_select_2.selected_date,
+  ].filter(Boolean);
+
+  console.log("Selected Dates:", selectedDates);
+
+  if (selectedDates.length === 0) {
+    console.error("No valid dates selected.");
+    await client.chat.postMessage({
+      channel: user,
+      text: "No valid dates selected for burnout leave. Please try again.",
+    });
+    return;
+  }
+
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  const verificationResult = await verifyBurnoutLeave(
+    user,
+    selectedDates,
+    reason
+  );
+
+  if (!verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `Failed to submit burnout leave request: ${verificationResult.message}. Please check the dates and try again.`,
+    });
+    return;
+  }
+
+  const leaveDetails = selectedDates
+    .map((date) => {
+      const fromDate = new Date(date).toISOString().split("T")[0];
+      return `*Date:* ${fromDate}\n*Type:* Full Day`;
+    })
+    .join("\n\n");
+
+  try {
+    const leave = new Leave({
+      user,
+      dates: selectedDates,
+      reason,
+      leaveType: "Burnout_Leave",
+      leaveDay: Array(selectedDates.length).fill("Full_Day"),
+      leaveTime: Array(selectedDates.length).fill("Full_Day"),
+    });
+    await leave.save();
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your burnout leave request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `Burnout leave request submitted successfully for the following dates: ${selectedDates
+        .map((date) => new Date(date).toISOString().split("T")[0])
+        .join(", ")}.`,
+    });
+  } catch (error) {
+    console.error("Error saving leave to database:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your burnout leave request. Please try again later.`,
+    });
+  }
+};
+
+const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
+  await ack();
+  const user = body.user.id;
+  const selectedDate = view.state.values.date.date_select.selected_date;
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided"; // Default reason if not provided
+  console.log("Selected Date:", new Date(selectedDate));
+  console.log("Reason for leave:", reason);
+
+  try {
+    const leave = new Leave({
+      user,
+      dates: [new Date(selectedDate)], // Ensure date is converted to Date object
+      reason,
+      leaveType: "Work_from_Home",
+      leaveDay: ["Full_Day"], // Assuming 'leaveDay' expects an array of strings
+      leaveTime: ["Full_Day"], // Assuming 'leaveTime' expects an array of strings
+    });
+    console.log(leave);
+
+    await leave.save();
+    const leaveDetails = `*Date:* ${
+      new Date(selectedDate).toISOString().split("T")[0]
+    }\n*Type:* Full_Day\n*Half Day:* Full_Day`;
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your casual leave request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error saving leave to database:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your work from home leave request. Please try again later.`,
+    });
+  }
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -3106,4 +3168,6 @@ module.exports = {
   handleCasualLeaveSubmission,
   handleMensuralLeaveSubmission,
   handleUnpaidLeaveSubmission,
+  handleBurnoutLeaveSubmission,
+  handleWorkFromHomeSubmission,
 };
