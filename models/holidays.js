@@ -21,8 +21,7 @@ const RestrictedHoliday = mongoose.model(
 
 const leaveSchema = new mongoose.Schema({
   user: String,
-  fromDate: String,
-  toDate: String,
+  dates: { type: [Date], required: true },
   reason: String,
   status: { type: String, default: "Pending" },
   leaveType: { type: String, required: true },

@@ -13,11 +13,48 @@ const isWeekendOrPublicHoliday = (date) => {
   return isWeekend || isPublicHoliday;
 };
 
-const verifySickLeave = async (user, fromDate, toDate) => {
-  // Implement logic to verify sick leave based on the new schema
-  // Consider fromDate, toDate, and leaveTime
-  // Return an object with isValid and message properties
-  return { isValid: true, message: "Sick leave verified successfully." };
+const verifySickLeave = async (
+  user,
+  selectedDates,
+  leaveType,
+  halfDay,
+  reason
+) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return { isValid: false, message: "No dates provided for sick leave." };
+  }
+
+  const formatDate = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new Error("Invalid date provided.");
+    }
+    return date;
+  };
+
+  const formattedDates = selectedDates.map(formatDate);
+
+  for (const date of formattedDates) {
+    if (isWeekendOrPublicHoliday(date)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+  }
+
+  console.log(
+    `Sick leave requested for the following dates: ${formattedDates
+      .map((date) => date.toISOString().split("T")[0])
+      .join(", ")}`
+  );
+
+  // Return verification result without saving
+  return {
+    isValid: true,
+    message: "Sick leave verified successfully.",
+  };
 };
 
 const verifyBurnoutLeave = async (user, fromDate, toDate) => {
@@ -93,7 +130,6 @@ const verifyBurnoutLeave = async (user, fromDate, toDate) => {
   );
   const quarterEnd = new Date(startDate.getFullYear(), currentQuarter * 3, 0);
 
-  // Check burnout leaves taken in the current quarter
   const leavesThisQuarter = await Leave.find({
     user: user,
     leaveType: "burnout",
