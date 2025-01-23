@@ -25,8 +25,8 @@ const leaveSchema = new mongoose.Schema({
   reason: String,
   status: { type: String, default: "Pending" },
   leaveType: { type: String, required: true },
-  leaveDay: { type: String, default: "full-day" },
-  leaveTime: { type: String, default: "full-day" },
+  leaveDay: { type: [String], required: true },
+  leaveTime: { type: [String], required: true },
 });
 
 const Leave = mongoose.model("Leave", leaveSchema);

@@ -25,6 +25,9 @@ const verifySickLeave = async (
   }
 
   const formatDate = (date) => {
+    if (typeof date === "string") {
+      date = new Date(date);
+    }
     if (!(date instanceof Date) || isNaN(date.getTime())) {
       throw new Error("Invalid date provided.");
     }
@@ -32,6 +35,7 @@ const verifySickLeave = async (
   };
 
   const formattedDates = selectedDates.map(formatDate);
+  console.log("Formatted Dates for Verification:", formattedDates);
 
   for (const date of formattedDates) {
     if (isWeekendOrPublicHoliday(date)) {
@@ -50,7 +54,6 @@ const verifySickLeave = async (
       .join(", ")}`
   );
 
-  // Return verification result without saving
   return {
     isValid: true,
     message: "Sick leave verified successfully.",
@@ -198,57 +201,52 @@ const verifyBurnoutLeave = async (user, fromDate, toDate) => {
   };
 };
 
-const verifyCasualLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-
-  if (!startDate || !endDate) {
-    return {
-      isValid: false,
-      message: "Please provide valid start and end dates",
-    };
+const verifyCasualLeave = async (
+  user,
+  selectedDates,
+  leaveTypes,
+  halfDays,
+  reason
+) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return { isValid: false, message: "No dates provided for casual leave." };
   }
 
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
+  const formatDate = (date) => {
+    if (typeof date === "string") {
+      date = new Date(date);
+    }
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new Error("Invalid date provided.");
+    }
+    return date;
+  };
 
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
+  const formattedDates = selectedDates.map(formatDate);
+  console.log("Formatted Dates for Verification:", formattedDates);
+
+  for (const date of formattedDates) {
+    if (isWeekendOrPublicHoliday(date)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
     }
   }
 
-  const userRecord = await User.findOne({ slackId: user });
-  const casualLeavesTaken = userRecord ? userRecord.casualLeave : 0;
-  const remainingCasualLeaves = 6 - casualLeavesTaken; // Calculate remaining leave
-  console.log({ casualLeavesTaken });
+  console.log(
+    `Casual leave requested for the following dates: ${formattedDates
+      .map((date) => date.toISOString().split("T")[0])
+      .join(", ")}`
+  );
 
-  if (casualLeavesTaken + diffDays > 6) {
-    return {
-      isValid: false,
-      message: `You have exceeded your yearly casual leave limit of 6 days. You can take ${remainingCasualLeaves} more days. Please contact HR for additional support.`,
-    };
-  }
-
-  const twoWeeksInMillis = 1000 * 60 * 60 * 24 * 14;
-  const currentDate = new Date();
-  if (diffDays > 1 && startDate - currentDate < twoWeeksInMillis) {
-    return {
-      isValid: false,
-      message:
-        "For leaves more than 1 day, due notice should be provided at least 2 weeks in advance.",
-    };
-  }
+  // Additional logic for verifying casual leave can be added here
 
   return {
     isValid: true,
-    message:
-      "Casual leave request is valid. You can take the leave individually or club it together. Please inform your team lead.",
+    message: "Casual leave verified successfully.",
   };
 };
 

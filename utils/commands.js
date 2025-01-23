@@ -24,6 +24,13 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString("en-US", options);
 };
 
+const calculateLeaveDays = (dates) => {
+  if (!Array.isArray(dates) || dates.length === 0) {
+    return 0;
+  }
+  return dates.length;
+};
+
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
 
@@ -144,426 +151,6 @@ const applyLeave = async ({ command, ack, client, body }) => {
     }
   } catch (error) {
     console.error(error);
-  }
-};
-
-const handleAddMoreDays = async ({ ack, body, client, action }) => {
-  await ack();
-  try {
-    await client.views.update({
-      view_id: body.view.id,
-      view: {
-        type: "modal",
-        callback_id: "date_selection_modal",
-        title: {
-          type: "plain_text",
-          text: "Select Dates",
-        },
-        blocks: [
-          {
-            type: "input",
-            block_id: "dates_1",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select a date",
-              },
-              action_id: "date_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Date 1",
-            },
-          },
-          {
-            type: "input",
-            block_id: "dates_2",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select a date",
-              },
-              action_id: "date_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Date 2",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "dates_3",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select a date",
-              },
-              action_id: "date_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Date 3",
-            },
-            optional: true,
-          },
-        ],
-        submit: {
-          type: "plain_text",
-          text: "Done",
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error opening add dates modal:", error);
-  }
-};
-
-const handleDateSelectionSubmission = async ({ ack, body, view, client }) => {
-  await ack();
-  console.log("View ID:", body.view.id);
-
-  const selectedDates1 = view.state.values.dates_1.date_select_1.selected_date;
-  const selectedDates2 = view.state.values.dates_2.date_select_2.selected_date;
-  const selectedDates3 = view.state.values.dates_3.date_select_3.selected_date;
-
-  const selectedDates = [selectedDates1, selectedDates2, selectedDates3]
-    .filter(Boolean)
-    .join(", ");
-
-  if (!selectedDates) {
-    console.error("No dates selected.");
-    return;
-  }
-  console.log(selectedDates);
-  try {
-    await client.views.open({
-      trigger_id: body.trigger_id,
-      view: {
-        type: "modal",
-        callback_id: "sick_leave_application_modal",
-        title: {
-          type: "plain_text",
-          text: "Apply for Sick Leave",
-        },
-        blocks: [
-          {
-            type: "input",
-            block_id: "selected_dates",
-            element: {
-              type: "plain_text_input",
-              action_id: "selected_dates_input",
-              initial_value: selectedDates,
-              multiline: false,
-            },
-            label: {
-              type: "plain_text",
-              text: "Selected Dates",
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `*Selected Dates:*\n${selectedDates}`,
-            },
-          },
-          {
-            type: "input",
-            block_id: "leave_type",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-          },
-          {
-            type: "input",
-            block_id: "half_day",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "reason",
-            element: {
-              type: "plain_text_input",
-              multiline: true,
-              action_id: "reason_input",
-            },
-            label: {
-              type: "plain_text",
-              text: "Reason",
-            },
-          },
-        ],
-        submit: {
-          type: "plain_text",
-          text: "Submit",
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error opening modal with selected dates:", error);
-  }
-};
-
-const calculateLeaveDays = (dates) => {
-  if (!Array.isArray(dates) || dates.length === 0) {
-    return 0;
-  }
-  return dates.length;
-};
-
-const rejectLeave = async ({ ack, body, client, action }) => {
-  await ack();
-  const leaveId = action.action_id.split("_")[2];
-
-  if (!leaveId) {
-    console.error("Leave ID is undefined.");
-    await client.chat.postMessage({
-      channel: body.user.id,
-      text: "An error occurred while rejecting the leave request. Please try again.",
-    });
-    return;
-  }
-
-  try {
-    const leaveRequest = await Leave.findByIdAndUpdate(
-      leaveId,
-      { status: "Rejected" },
-      { new: true }
-    );
-
-    if (!leaveRequest) {
-      throw new Error("Leave request not found");
-    }
-
-    await client.chat.update({
-      channel: body.channel.id,
-      ts: body.message.ts,
-      text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
-      blocks: [],
-    });
-
-    await client.chat.postMessage({
-      channel: leaveRequest.user,
-      text: `Your leave request from ${formatDate(
-        leaveRequest.fromDate
-      )} to ${formatDate(leaveRequest.toDate)} has been rejected.`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${formatDate(
-              leaveRequest.fromDate
-            )} to ${formatDate(
-              leaveRequest.toDate
-            )}\n\nPlease contact your lead for more info.`,
-          },
-        },
-      ],
-    });
-  } catch (error) {
-    console.error("Error rejecting leave:", error);
-    await client.chat.postMessage({
-      channel: body.user.id,
-      text: "An error occurred while rejecting the leave request. Please try again.",
-    });
-  }
-};
-
-const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
-  await ack();
-
-  if (action.action_id === "select_sick_leave") {
-    await client.views.update({
-      view_id: body.view.id,
-      view: {
-        type: "modal",
-        callback_id: "leave_application_modal",
-        title: {
-          type: "plain_text",
-          text: "Apply for Leave",
-        },
-        blocks: [
-          {
-            type: "input",
-            block_id: "dates",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select date",
-              },
-              action_id: "date_select",
-            },
-            label: {
-              type: "plain_text",
-              text: "Date",
-            },
-          },
-          {
-            type: "actions",
-            block_id: "add_more_days",
-            elements: [
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Add More Days",
-                },
-                action_id: "add_more_days_button",
-              },
-            ],
-          },
-          {
-            type: "section",
-            block_id: "leave_description",
-            text: {
-              type: "mrkdwn",
-              text: "_Can avail immediately. Leaves more than 3 days, need a certification._",
-            },
-          },
-          {
-            type: "input",
-            block_id: "leave_type",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-          },
-          {
-            type: "input",
-            block_id: "half_day",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "reason",
-            element: {
-              type: "plain_text_input",
-              multiline: true,
-              action_id: "reason_input",
-            },
-            label: {
-              type: "plain_text",
-              text: "Reason",
-            },
-          },
-        ],
-        submit: {
-          type: "plain_text",
-          text: "Submit",
-        },
-      },
-    });
   }
 };
 
@@ -697,34 +284,517 @@ const openLeaveTypeModal = async ({ command, ack, client, body }) => {
   }
 };
 
+const handleAddMoreDays = async ({ ack, body, client, action }) => {
+  await ack();
+  try {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "date_selection_modal",
+        title: {
+          type: "plain_text",
+          text: "Select Dates",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "leave_type_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select a date",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 3",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Done",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error opening add dates modal:", error);
+  }
+};
+
+const handleDateSelectionSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+  console.log("View ID:", body.view.id);
+
+  const selectedDates1 = view.state.values.dates_1.date_select_1.selected_date;
+  const leaveType1 =
+    view.state.values.leave_type_1.leave_type_select_1.selected_option?.value ||
+    "Full_Day";
+  const halfDay1 =
+    leaveType1 === "Half_Day"
+      ? view.state.values.half_day_1.half_day_select_1.selected_option?.value
+      : null;
+
+  const selectedDates2 = view.state.values.dates_2.date_select_2.selected_date;
+  const leaveType2 =
+    view.state.values.leave_type_2.leave_type_select_2.selected_option?.value ||
+    "Full_Day";
+  const halfDay2 =
+    leaveType2 === "Half_Day"
+      ? view.state.values.half_day_2.half_day_select_2.selected_option?.value
+      : null;
+
+  const selectedDates3 = view.state.values.dates_3.date_select_3.selected_date;
+  const leaveType3 =
+    view.state.values.leave_type_3.leave_type_select_3.selected_option?.value ||
+    "Full_Day";
+  const halfDay3 =
+    leaveType3 === "Half_Day"
+      ? view.state.values.half_day_3.half_day_select_3.selected_option?.value
+      : null;
+
+  const leaveDetails = [];
+
+  if (selectedDates1 && leaveType1) {
+    leaveDetails.push(
+      `*Date:* ${selectedDates1}\n*Type:* ${leaveType1}\n*Half Day:* ${
+        halfDay1 || "N/A"
+      }`
+    );
+  }
+  if (selectedDates2 && leaveType2) {
+    leaveDetails.push(
+      `*Date:* ${selectedDates2}\n*Type:* ${leaveType2}\n*Half Day:* ${
+        halfDay2 || "N/A"
+      }`
+    );
+  }
+  if (selectedDates3 && leaveType3) {
+    leaveDetails.push(
+      `*Date:* ${selectedDates3 || "N/A"}\n*Type:* ${leaveType3}\n*Half Day:* ${
+        halfDay3 || "N/A"
+      }`
+    );
+  }
+
+  if (leaveDetails.length === 0) {
+    console.error("No dates selected.");
+    return;
+  }
+
+  console.log(leaveDetails.join("\n\n"));
+
+  try {
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "sick_leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Sick Leave",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "selected_dates",
+            element: {
+              type: "plain_text_input",
+              action_id: "selected_dates_input",
+              initial_value: selectedDates1, // Changed to selectedDates1 for clarity
+              multiline: false,
+            },
+            label: {
+              type: "plain_text",
+              text: "Selected Dates",
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Selected Dates:*\n${leaveDetails.join("\n\n")}`, // Ensure proper formatting
+            },
+          },
+          {
+            type: "input",
+            block_id: "leave_type",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+            optional: true,
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error opening modal with selected dates:", error);
+  }
+};
+
 const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
 
-  const selectedDatesInput =
-    view.state.values.selected_dates.selected_dates_input.value;
-  let selectedDates = selectedDatesInput
-    .split(",")
-    .map((date) => new Date(date.trim()))
-    .sort((a, b) => b - a);
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_3.date_select_3.selected_date,
+  ].filter(Boolean);
 
-  const leaveType =
-    view.state.values.leave_type.leave_type_select.selected_option.value;
-  const halfDay =
-    leaveType === "Half_Day"
-      ? view.state.values.half_day.half_day_select.selected_option.value
-      : null;
+  console.log("Selected Dates:", selectedDates);
+
+  const leaveTypes = [
+    view.state.values.leave_type_1.leave_type_select_1.selected_option?.value,
+    view.state.values.leave_type_2.leave_type_select_2.selected_option?.value,
+    view.state.values.leave_type_3.leave_type_select_3.selected_option?.value,
+  ].filter(Boolean);
+
+  console.log("Leave Types:", leaveTypes);
+
+  const halfDays = leaveTypes.map((type, index) => {
+    if (type === "Full_Day") {
+      return "Full_Day";
+    } else {
+      return (
+        view.state.values[`half_day_${index + 1}`][
+          `half_day_select_${index + 1}`
+        ].selected_option?.value || "N/A"
+      );
+    }
+  });
+
+  console.log("Half Days:", halfDays);
+
+  if (selectedDates.length === 0) {
+    console.error("No valid dates selected.");
+    await client.chat.postMessage({
+      channel: user,
+      text: "No valid dates selected for sick leave. Please try again.",
+    });
+    return;
+  }
+
   const reason =
     view.state.values.reason.reason_input.value || "No reason provided";
-
-  selectedDates = selectedDates.sort((a, b) => a - b);
 
   const verificationResult = await verifySickLeave(
     user,
     selectedDates,
-    leaveType,
-    halfDay,
+    leaveTypes,
+    halfDays,
     reason
   );
 
@@ -736,19 +806,14 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     return;
   }
 
-  const fromDate = selectedDates[0].toISOString().split("T")[0];
-  const toDate = selectedDates[selectedDates.length - 1]
-    .toISOString()
-    .split("T")[0];
-
-  const leaveDetails = `
-    *Leave Request Details:*
-    *User:* <@${user}>
-    *Leave Type:* Sick Leave
-    *From:* ${fromDate}
-    *To:* ${toDate}
-    *Reason:* ${reason}
-  `;
+  const leaveDetails = selectedDates
+    .map((date, index) => {
+      const fromDate = new Date(date).toISOString().split("T")[0];
+      const leaveType = leaveTypes[index];
+      const halfDay = halfDays[index];
+      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
+    })
+    .join("\n\n");
 
   try {
     const leave = new Leave({
@@ -756,8 +821,8 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
       dates: selectedDates,
       reason,
       leaveType: "Sick_Leave",
-      leaveDay: leaveType,
-      leaveTime: leaveType === "Half_Day" ? halfDay : "full-day",
+      leaveDay: leaveTypes,
+      leaveTime: halfDays,
     });
     await leave.save();
 
@@ -809,7 +874,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     await client.chat.postMessage({
       channel: user,
       text: `Sick leave request submitted successfully for the following dates: ${selectedDates
-        .map((date) => date.toISOString().split("T")[0])
+        .map((date) => new Date(date).toISOString().split("T")[0])
         .join(", ")}.`,
     });
   } catch (error) {
@@ -817,6 +882,350 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     await client.chat.postMessage({
       channel: user,
       text: `:x: There was an error submitting your leave request. Please try again later.`,
+    });
+  }
+};
+
+const rejectLeave = async ({ ack, body, client, action }) => {
+  await ack();
+  const leaveId = action.action_id.split("_")[2];
+
+  if (!leaveId) {
+    console.error("Leave ID is undefined.");
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "An error occurred while rejecting the leave request. Please try again.",
+    });
+    return;
+  }
+
+  try {
+    const leaveRequest = await Leave.findByIdAndUpdate(
+      leaveId,
+      { status: "Rejected" },
+      { new: true }
+    );
+
+    if (!leaveRequest) {
+      throw new Error("Leave request not found");
+    }
+
+    await client.chat.update({
+      channel: body.channel.id,
+      ts: body.message.ts,
+      text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
+      blocks: [],
+    });
+
+    await client.chat.postMessage({
+      channel: leaveRequest.user,
+      text: `Your leave request from ${formatDate(
+        leaveRequest.fromDate
+      )} to ${formatDate(leaveRequest.toDate)} has been rejected.`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${formatDate(
+              leaveRequest.fromDate
+            )} to ${formatDate(
+              leaveRequest.toDate
+            )}\n\nPlease contact your lead for more info.`,
+          },
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error rejecting leave:", error);
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "An error occurred while rejecting the leave request. Please try again.",
+    });
+  }
+};
+
+const handleLeaveTypeSelection = async ({ ack, body, client, action }) => {
+  await ack();
+
+  if (action.action_id === "select_sick_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "sick_leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Apply for Leave",
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "leave_type_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 3",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
     });
   }
 };
