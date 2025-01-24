@@ -16,12 +16,22 @@ const isWeekendOrPublicHoliday = (date) => {
 const verifySickLeave = async (
   user,
   selectedDates,
-  leaveType,
-  halfDay,
+  leaveTypes,
+  halfDays,
   reason
 ) => {
   if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
     return { isValid: false, message: "No dates provided for sick leave." };
+  }
+
+  const dateSet = new Set(
+    selectedDates.map((date) => new Date(date).toDateString())
+  );
+  if (dateSet.size !== selectedDates.length) {
+    return {
+      isValid: false,
+      message: "Two or more selected dates are the same.",
+    };
   }
 
   const formatDate = (date) => {
@@ -37,6 +47,38 @@ const verifySickLeave = async (
   const formattedDates = selectedDates.map(formatDate);
   console.log("Formatted Dates for Verification:", formattedDates);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startDate = formattedDates[0];
+
+  if (startDate < today) {
+    return { isValid: false, message: "Start date cannot be in the past." };
+  }
+
+  const userData = await User.findOne({ slackId: user });
+  if (!userData) {
+    return {
+      isValid: false,
+      message: "User not found.",
+    };
+  }
+
+  const totalLeaveDays = selectedDates.reduce((total, date, index) => {
+    return total + (halfDays[index] === "Full_Day" ? 1 : 0.5);
+  }, 0);
+
+  const totalSickLeaves = userData.sickLeave + totalLeaveDays;
+  const remainingSickLeaves = 12 - totalSickLeaves;
+  if (totalSickLeaves > 12) {
+    return {
+      isValid: false,
+      message: `Exceeded the limit of 12 paid sick leaves per year. You have ${
+        remainingSickLeaves < 0 ? 0 : remainingSickLeaves
+      } sick leave days remaining.`,
+    };
+  }
+
   for (const date of formattedDates) {
     if (isWeekendOrPublicHoliday(date)) {
       return {
@@ -44,6 +86,39 @@ const verifySickLeave = async (
         message: `The date ${
           date.toISOString().split("T")[0]
         } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+
+    const overlappingLeave = await Leave.findOne({
+      user: user,
+      dates: date,
+      status: "Approved",
+    });
+    if (overlappingLeave) {
+      return {
+        isValid: false,
+        message: `There is already an approved leave on ${
+          date.toISOString().split("T")[0]
+        }. Please select a different date.`,
+      };
+    }
+
+    const previousDay = new Date(date);
+    previousDay.setDate(date.getDate() - 1);
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+
+    const adjacentLeave = await Leave.findOne({
+      user: user,
+      dates: { $in: [previousDay, nextDay] },
+      status: "Approved",
+    });
+    if (adjacentLeave) {
+      return {
+        isValid: false,
+        message: `Clubbing sick leave with other leaves is not allowed. Please ensure no leaves are applied one day before or after ${
+          date.toISOString().split("T")[0]
+        }.`,
       };
     }
   }

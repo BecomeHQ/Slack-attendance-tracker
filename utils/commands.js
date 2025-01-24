@@ -708,149 +708,6 @@ const handleDateSelectionSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
-const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
-  await ack();
-
-  const user = body.user.id;
-
-  const selectedDates = [
-    view.state.values.dates_1.date_select_1.selected_date,
-    view.state.values.dates_2.date_select_2.selected_date,
-    view.state.values.dates_3.date_select_3.selected_date,
-  ].filter(Boolean);
-
-  console.log("Selected Dates:", selectedDates);
-
-  const leaveTypes = [
-    view.state.values.leave_type_1.leave_type_select_1.selected_option?.value,
-    view.state.values.leave_type_2.leave_type_select_2.selected_option?.value,
-    view.state.values.leave_type_3.leave_type_select_3.selected_option?.value,
-  ].filter(Boolean);
-
-  console.log("Leave Types:", leaveTypes);
-
-  const halfDays = leaveTypes.map((type, index) => {
-    if (type === "Full_Day") {
-      return "Full_Day";
-    } else {
-      return (
-        view.state.values[`half_day_${index + 1}`][
-          `half_day_select_${index + 1}`
-        ].selected_option?.value || "N/A"
-      );
-    }
-  });
-
-  console.log("Half Days:", halfDays);
-
-  if (selectedDates.length === 0) {
-    console.error("No valid dates selected.");
-    await client.chat.postMessage({
-      channel: user,
-      text: "No valid dates selected for sick leave. Please try again.",
-    });
-    return;
-  }
-
-  const reason =
-    view.state.values.reason.reason_input.value || "No reason provided";
-
-  const verificationResult = await verifySickLeave(
-    user,
-    selectedDates,
-    leaveTypes,
-    halfDays,
-    reason
-  );
-
-  if (!verificationResult.isValid) {
-    await client.chat.postMessage({
-      channel: user,
-      text: `Failed to submit sick leave request: ${verificationResult.message}. Please check the dates and try again.`,
-    });
-    return;
-  }
-
-  const leaveDetails = selectedDates
-    .map((date, index) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
-      const leaveType = leaveTypes[index];
-      const halfDay = halfDays[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
-    })
-    .join("\n\n");
-
-  try {
-    const leave = new Leave({
-      user,
-      dates: selectedDates,
-      reason,
-      leaveType: "Sick_Leave",
-      leaveDay: leaveTypes,
-      leaveTime: halfDays,
-    });
-    await leave.save();
-
-    await client.chat.postMessage({
-      channel: user,
-      text: `:white_check_mark: Your leave request has been submitted for approval!\n\n${leaveDetails}`,
-    });
-
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
-      text: `:bell: New leave request received!\n\n${leaveDetails}`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `:bell: New leave request received!\n\n${leaveDetails}`,
-          },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
-        },
-      ],
-    });
-
-    await client.chat.postMessage({
-      channel: user,
-      text: `Sick leave request submitted successfully for the following dates: ${selectedDates
-        .map((date) => new Date(date).toISOString().split("T")[0])
-        .join(", ")}.`,
-    });
-  } catch (error) {
-    console.error("Error saving leave to database:", error);
-    await client.chat.postMessage({
-      channel: user,
-      text: `:x: There was an error submitting your leave request. Please try again later.`,
-    });
-  }
-};
-
 const rejectLeave = async ({ ack, body, client, action }) => {
   await ack();
   const leaveId = action.action_id.split("_")[2];
@@ -1490,13 +1347,13 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select date",
+                text: "Select start date",
               },
-              action_id: "date_select_1",
+              action_id: "start_date_select",
             },
             label: {
               type: "plain_text",
-              text: "Date 1",
+              text: "Start Date",
             },
           },
           {
@@ -1506,13 +1363,13 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select date",
+                text: "Select end date",
               },
-              action_id: "date_select_2",
+              action_id: "end_date_select",
             },
             label: {
               type: "plain_text",
-              text: "Date 2",
+              text: "End Date",
             },
             optional: true,
           },
@@ -2457,7 +2314,10 @@ const approveLeave = async ({ ack, body, client, action }) => {
       throw new Error("User not found");
     }
 
-    const leaveDays = calculateLeaveDays(leaveRequest.dates);
+    // Calculate leave days based on full and half days
+    const leaveDays = leaveRequest.leaveDay.reduce((total, dayType) => {
+      return total + (dayType === "Full_Day" ? 1 : 0.5);
+    }, 0);
 
     let remainingLeaveBalance;
     let approvalMessage;
@@ -2558,6 +2418,149 @@ const approveLeave = async ({ ack, body, client, action }) => {
     await client.chat.postMessage({
       channel: body.user.id,
       text: "An error occurred while approving the leave request. Please try again.",
+    });
+  }
+};
+
+const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+
+  const user = body.user.id;
+
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_3.date_select_3.selected_date,
+  ].filter(Boolean);
+
+  console.log("Selected Dates:", selectedDates);
+
+  const leaveTypes = [
+    view.state.values.leave_type_1.leave_type_select_1.selected_option?.value,
+    view.state.values.leave_type_2.leave_type_select_2.selected_option?.value,
+    view.state.values.leave_type_3.leave_type_select_3.selected_option?.value,
+  ].filter(Boolean);
+
+  console.log("Leave Types:", leaveTypes);
+
+  const halfDays = leaveTypes.map((type, index) => {
+    if (type === "Full_Day") {
+      return "Full_Day";
+    } else {
+      return (
+        view.state.values[`half_day_${index + 1}`][
+          `half_day_select_${index + 1}`
+        ].selected_option?.value || "N/A"
+      );
+    }
+  });
+
+  console.log("Half Days:", halfDays);
+
+  if (selectedDates.length === 0) {
+    console.error("No valid dates selected.");
+    await client.chat.postMessage({
+      channel: user,
+      text: "No valid dates selected for sick leave. Please try again.",
+    });
+    return;
+  }
+
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  const verificationResult = await verifySickLeave(
+    user,
+    selectedDates,
+    leaveTypes,
+    halfDays,
+    reason
+  );
+
+  if (!verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `Failed to submit sick leave request: ${verificationResult.message}. Please check the dates and try again.`,
+    });
+    return;
+  }
+
+  const leaveDetails = selectedDates
+    .map((date, index) => {
+      const fromDate = new Date(date).toISOString().split("T")[0];
+      const leaveType = leaveTypes[index];
+      const halfDay = halfDays[index];
+      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
+    })
+    .join("\n\n");
+
+  try {
+    const leave = new Leave({
+      user,
+      dates: selectedDates,
+      reason,
+      leaveType: "Sick_Leave",
+      leaveDay: leaveTypes,
+      leaveTime: halfDays,
+    });
+    await leave.save();
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your leave request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New leave request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New leave request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `Sick leave request submitted successfully for the following dates: ${selectedDates
+        .map((date) => new Date(date).toISOString().split("T")[0])
+        .join(", ")}.`,
+    });
+  } catch (error) {
+    console.error("Error saving leave to database:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your leave request. Please try again later.`,
     });
   }
 };
@@ -2962,6 +2965,8 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
     view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_3.date_select_3.selected_date, // Added third date
+    view.state.values.dates_4.date_select_4.selected_date, // Added fourth date
   ].filter(Boolean);
 
   console.log("Selected Dates:", selectedDates);

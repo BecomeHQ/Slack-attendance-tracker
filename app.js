@@ -97,7 +97,6 @@ app.action("add_more_days_button", handleAddMoreDays);
 
 app.action("date_select", handleDateSelectionSubmission);
 
-// app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
 app.view("work_from_home_application_modal", handleWorkFromHomeSubmission);
 
 (async () => {
