@@ -148,10 +148,60 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
     };
   }
 
+  const currentQuarter = Math.floor(new Date().getMonth() / 3);
+  const quarterStart = new Date(
+    new Date().getFullYear(),
+    currentQuarter * 3,
+    1
+  );
+  const quarterEnd = new Date(
+    new Date().getFullYear(),
+    (currentQuarter + 1) * 3,
+    0
+  );
+
+  let leavesThisQuarter = 0;
+  const leaves = await Leave.find({
+    user: user,
+    leaveType: "Burnout_Leave",
+    dates: { $elemMatch: { $gte: quarterStart, $lte: quarterEnd } },
+    status: "Approved",
+  });
+
+  leaves.forEach((doc) => {
+    leavesThisQuarter += doc.dates.filter(
+      (date) => date >= quarterStart && date <= quarterEnd
+    ).length;
+  });
+
+  if (leavesThisQuarter >= 2) {
+    return {
+      isValid: false,
+      message: `You have already taken ${leavesThisQuarter} burnout leaves this quarter, and no more are allowed.`,
+    };
+  } else if (leavesThisQuarter === 1 && selectedDates.length > 1) {
+    return {
+      isValid: false,
+      message: "You can only take one more burnout leave day this quarter.",
+    };
+  }
+
   const formattedDates = selectedDates.map((date) => new Date(date));
   console.log("Formatted Dates for Verification:", formattedDates);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   for (const date of formattedDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is in the past. Please select a future date.`,
+      };
+    }
+
     if (isWeekendOrPublicHoliday(date)) {
       return {
         isValid: false,
@@ -160,6 +210,52 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
         } is a weekend or a public holiday. Please select a different date.`,
       };
     }
+
+    const adjacentLeaves = await Leave.findOne({
+      user: user,
+      dates: {
+        $in: [
+          new Date(date.getTime() - 86400000),
+          new Date(date.getTime() + 86400000),
+        ],
+      },
+      status: "Approved",
+    });
+
+    if (adjacentLeaves) {
+      return {
+        isValid: false,
+        message: `Burnout leave cannot be clubbed with other leaves. Please ensure no leaves are applied one day before or after ${
+          date.toISOString().split("T")[0]
+        }.`,
+      };
+    }
+
+    const userData = await User.findOne({ slackId: user });
+    const totalBurnoutLeaves = userData.burnoutLeave + selectedDates.length;
+    const remainingBurnoutLeaves = 6 - totalBurnoutLeaves;
+    if (totalBurnoutLeaves > 6) {
+      return {
+        isValid: false,
+        message: `Exceeded the limit of 6 burnout leaves per year. You have ${
+          remainingBurnoutLeaves < 0 ? 0 : remainingBurnoutLeaves
+        } burnout leave days remaining.`,
+      };
+    }
+  }
+
+  const overlappingLeave = await Leave.findOne({
+    user: user,
+    dates: { $in: formattedDates },
+    status: "Approved",
+  });
+  if (overlappingLeave) {
+    return {
+      isValid: false,
+      message: `There is already an approved leave on ${
+        overlappingLeave.dates.toISOString().split("T")[0]
+      }. Please select a different date.`,
+    };
   }
 
   console.log(
@@ -167,8 +263,6 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
       .map((date) => date.toISOString().split("T")[0])
       .join(", ")}`
   );
-
-  // Additional logic for verifying burnout leave can be added here
 
   return {
     isValid: true,

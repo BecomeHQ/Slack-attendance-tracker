@@ -2314,13 +2314,13 @@ const approveLeave = async ({ ack, body, client, action }) => {
       throw new Error("User not found");
     }
 
-    // Calculate leave days based on full and half days
     const leaveDays = leaveRequest.leaveDay.reduce((total, dayType) => {
       return total + (dayType === "Full_Day" ? 1 : 0.5);
     }, 0);
 
     let remainingLeaveBalance;
     let approvalMessage;
+    console.log({ leaveRequest });
 
     if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
@@ -2328,7 +2328,7 @@ const approveLeave = async ({ ack, body, client, action }) => {
       approvalMessage = `🤒 Your sick leave for ${formatDate(
         leaveRequest.fromDate
       )} is approved. Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!`;
-    } else if (leaveRequest.leaveType === "Burnout") {
+    } else if (leaveRequest.leaveType === "Burnout_Leave") {
       user.burnout = (user.burnout || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.burnout;
       approvalMessage = `🧠 Your burnout leave for ${formatDate(
@@ -2959,118 +2959,119 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
 
 const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
-
   const user = body.user.id;
-
-  const selectedDates = [
-    view.state.values.dates_1.date_select_1.selected_date,
-    view.state.values.dates_2.date_select_2.selected_date,
-    view.state.values.dates_3.date_select_3.selected_date, // Added third date
-    view.state.values.dates_4.date_select_4.selected_date, // Added fourth date
-  ].filter(Boolean);
-
-  console.log("Selected Dates:", selectedDates);
-
-  if (selectedDates.length === 0) {
-    console.error("No valid dates selected.");
-    await client.chat.postMessage({
-      channel: user,
-      text: "No valid dates selected for burnout leave. Please try again.",
-    });
-    return;
-  }
-
-  const reason =
-    view.state.values.reason.reason_input.value || "No reason provided";
-
-  const verificationResult = await verifyBurnoutLeave(
-    user,
-    selectedDates,
-    reason
-  );
-
-  if (!verificationResult.isValid) {
-    await client.chat.postMessage({
-      channel: user,
-      text: `Failed to submit burnout leave request: ${verificationResult.message}. Please check the dates and try again.`,
-    });
-    return;
-  }
-
-  const leaveDetails = selectedDates
-    .map((date) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
-      return `*Date:* ${fromDate}\n*Type:* Full Day`;
-    })
-    .join("\n\n");
-
+  const startDate = view.state.values.dates_1.start_date_select.selected_date;
+  const endDate = view.state.values.dates_2.end_date_select.selected_date;
+  const reason = view.state.values.reason.reason_input.value;
+  const selectedDates = [startDate, endDate].filter(Boolean);
   try {
-    const leave = new Leave({
+    console.log("Selected Dates:", selectedDates);
+    console.log("Reason for leave:", reason);
+
+    if (selectedDates.length === 0) {
+      console.error("No valid dates selected.");
+      await client.chat.postMessage({
+        channel: user,
+        text: "No valid dates selected for burnout leave. Please try again.",
+      });
+      return;
+    }
+
+    const verificationResult = await verifyBurnoutLeave(
       user,
-      dates: selectedDates,
-      reason,
-      leaveType: "Burnout_Leave",
-      leaveDay: Array(selectedDates.length).fill("Full_Day"),
-      leaveTime: Array(selectedDates.length).fill("Full_Day"),
-    });
-    await leave.save();
+      selectedDates,
+      reason
+    );
 
-    await client.chat.postMessage({
-      channel: user,
-      text: `:white_check_mark: Your burnout leave request has been submitted for approval!\n\n${leaveDetails}`,
-    });
+    if (!verificationResult.isValid) {
+      await client.chat.postMessage({
+        channel: user,
+        text: `Failed to submit burnout leave request: ${verificationResult.message}. Please check the dates and try again.`,
+      });
+      return;
+    }
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
-      text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+    const leaveDetails = selectedDates
+      .map((date) => {
+        const fromDate = new Date(date).toISOString().split("T")[0];
+        return `*Date:* ${fromDate}\n*Type:* Full Day`;
+      })
+      .join("\n\n");
+
+    try {
+      const leave = new Leave({
+        user,
+        dates: selectedDates,
+        reason,
+        leaveType: "Burnout_Leave",
+        leaveDay: Array(selectedDates.length).fill("Full_Day"),
+        leaveTime: Array(selectedDates.length).fill("Full_Day"),
+      });
+      await leave.save();
+
+      await client.chat.postMessage({
+        channel: user,
+        text: `:white_check_mark: Your burnout leave request has been submitted for approval!\n\n${leaveDetails}`,
+      });
+
+      const adminUserId = process.env.ADMIN_USER_ID;
+      await client.chat.postMessage({
+        channel: adminUserId,
+        text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+            },
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Approve",
+                  emoji: true,
+                },
+                style: "primary",
+                action_id: `approve_leave_${leave._id}`,
               },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Reject",
+                  emoji: true,
+                },
+                style: "danger",
+                action_id: `reject_leave_${leave._id}`,
               },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
-        },
-      ],
-    });
+            ],
+          },
+        ],
+      });
 
-    await client.chat.postMessage({
-      channel: user,
-      text: `Burnout leave request submitted successfully for the following dates: ${selectedDates
-        .map((date) => new Date(date).toISOString().split("T")[0])
-        .join(", ")}.`,
-    });
+      await client.chat.postMessage({
+        channel: user,
+        text: `Burnout leave request submitted successfully for the following dates: ${selectedDates
+          .map((date) => new Date(date).toISOString().split("T")[0])
+          .join(", ")}.`,
+      });
+    } catch (error) {
+      console.error("Error saving leave to database:", error);
+      await client.chat.postMessage({
+        channel: user,
+        text: `:x: There was an error submitting your burnout leave request. Please try again later.`,
+      });
+    }
   } catch (error) {
-    console.error("Error saving leave to database:", error);
+    console.error("Error handling burnout leave submission:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your burnout leave request. Please try again later.`,
+      text: `:x: There was an error processing your burnout leave request. Please try again later.`,
     });
   }
 };
