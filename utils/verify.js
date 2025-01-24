@@ -49,11 +49,15 @@ const verifySickLeave = async (
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const startDate = formattedDates[0];
-
-  if (startDate < today) {
-    return { isValid: false, message: "Start date cannot be in the past." };
+  for (const date of formattedDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } cannot be in the past.`,
+      };
+    }
   }
 
   const userData = await User.findOne({ slackId: user });
@@ -294,13 +298,72 @@ const verifyCasualLeave = async (
   const formattedDates = selectedDates.map(formatDate);
   console.log("Formatted Dates for Verification:", formattedDates);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const userData = await User.findOne({ slackId: user });
+  const totalDaysRequested = selectedDates.reduce((total, _, index) => {
+    return total + (halfDays[index] === "Full_Day" ? 1 : 0.5);
+  }, 0);
+  const totalCasualLeaves = userData.casualLeave + totalDaysRequested;
+
+  if (totalCasualLeaves > 6) {
+    return {
+      isValid: false,
+      message: `Exceeded the limit of 6 casual leaves per year. You have ${
+        6 - userData.casualLeave
+      } casual leave days remaining.`,
+    };
+  }
+
   for (const date of formattedDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a past date. Please select a future date.`,
+      };
+    }
+
     if (isWeekendOrPublicHoliday(date)) {
       return {
         isValid: false,
         message: `The date ${
           date.toISOString().split("T")[0]
         } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+
+    const overlappingLeave = await Leave.findOne({
+      user: user,
+      dates: date,
+      status: "Approved",
+    });
+    if (overlappingLeave) {
+      return {
+        isValid: false,
+        message: `There is already an approved leave on ${
+          date.toISOString().split("T")[0]
+        }. Please select a different date.`,
+      };
+    }
+  }
+
+  if (totalDaysRequested <= 1) {
+    return {
+      isValid: true,
+      message: "Casual leave for one day verified successfully.",
+    };
+  } else {
+    const earliestDate = new Date(Math.min.apply(null, formattedDates));
+    const requiredNoticeDate = new Date(earliestDate);
+    requiredNoticeDate.setDate(requiredNoticeDate.getDate() - 14);
+
+    if (today > requiredNoticeDate) {
+      return {
+        isValid: false,
+        message: `For leave of more than one day, application must be submitted at least 2 weeks in advance. The earliest date in your request is too soon.`,
       };
     }
   }
@@ -310,8 +373,6 @@ const verifyCasualLeave = async (
       .map((date) => date.toISOString().split("T")[0])
       .join(", ")}`
   );
-
-  // Additional logic for verifying casual leave can be added here
 
   return {
     isValid: true,
