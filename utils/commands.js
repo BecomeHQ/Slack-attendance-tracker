@@ -1939,6 +1939,57 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           {
             type: "input",
+            block_id: "date_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select second date",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Second Date",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "date_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select third date",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Third Date",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "date_4",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select fourth date",
+              },
+              action_id: "date_select_4",
+            },
+            label: {
+              type: "plain_text",
+              text: "Fourth Date",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
             block_id: "reason",
             element: {
               type: "plain_text_input",
@@ -2920,7 +2971,7 @@ const approveLeave = async ({ ack, body, client, action }) => {
       approvalMessage = `📝 Your unpaid leave for ${formatDate(
         leaveRequest.fromDate
       )} is approved. We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.`;
-    } else if (leaveRequest.leaveType === "WFH_Leave") {
+    } else if (leaveRequest.leaveType === "Work_from_Home") {
       user.wfhLeave = (user.wfhLeave || 0) + leaveDays;
       remainingLeaveBalance = 4 - user.wfhLeave;
       approvalMessage = `🏡 Your WFH day for ${formatDate(
@@ -3629,42 +3680,69 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
 const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
   await ack();
   const user = body.user.id;
-  const selectedDate = view.state.values.date.date_select.selected_date;
+  const selectedDates = [
+    view.state.values.date.date_select.selected_date,
+    view.state.values.date_2.date_select_2.selected_date,
+    view.state.values.date_3.date_select_3.selected_date,
+    view.state.values.date_4.date_select_4.selected_date,
+  ]
+    .filter(Boolean)
+    .map((date) => new Date(date).toISOString().split("T")[0]);
+
   const reason =
-    view.state.values.reason.reason_input.value || "No reason provided"; // Default reason if not provided
-  console.log("Selected Date:", new Date(selectedDate));
+    view.state.values.reason.reason_input.value || "No reason provided";
+  console.log("Selected Dates:", selectedDates);
   console.log("Reason for leave:", reason);
+
+  if (selectedDates.length === 0) {
+    console.error("No valid dates selected.");
+    await client.chat.postMessage({
+      channel: user,
+      text: "No valid dates selected for work from home leave. Please try again.",
+    });
+    return;
+  }
+
+  const verificationResult = await verifyWFHLeave(user, selectedDates, reason);
+
+  if (!verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `Failed to submit WFH Leave request: ${verificationResult.message}. Please check the dates and try again.`,
+    });
+    return;
+  }
 
   try {
     const leave = new Leave({
       user,
-      dates: [new Date(selectedDate)], // Ensure date is converted to Date object
+      dates: selectedDates,
       reason,
       leaveType: "Work_from_Home",
-      leaveDay: ["Full_Day"], // Assuming 'leaveDay' expects an array of strings
-      leaveTime: ["Full_Day"], // Assuming 'leaveTime' expects an array of strings
+      leaveDay: Array(selectedDates.length).fill("Full_Day"),
+      leaveTime: Array(selectedDates.length).fill("Full_Day"),
     });
-    console.log(leave);
-
     await leave.save();
-    const leaveDetails = `*Date:* ${
-      new Date(selectedDate).toISOString().split("T")[0]
-    }\n*Type:* Full_Day\n*Half Day:* Full_Day`;
+
+    const leaveDetails = selectedDates
+      .map((date) => `*Date:* ${date}\n*Type:* Full_Day\n*Half Day:* Full_Day`)
+      .join("\n\n");
+
     await client.chat.postMessage({
       channel: user,
-      text: `:white_check_mark: Your casual leave request has been submitted for approval!\n\n${leaveDetails}`,
+      text: `:white_check_mark: Your WFH leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+      text: `:bell: New WFH request received!\n\n${leaveDetails}`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New WFH leave request received!\n\n${leaveDetails}`,
           },
         },
         {

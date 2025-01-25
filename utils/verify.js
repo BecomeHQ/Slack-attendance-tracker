@@ -1135,55 +1135,89 @@ const verifyRestrictedHoliday = async (user, selectedDates) => {
   };
 };
 
-const verifyWFHLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const currentDate = new Date();
+const verifyWFHLeave = async (user, selectedDates, reason) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return { isValid: false, message: "No dates provided for WFH leave." };
+  }
 
-  if (!startDate || !endDate) {
+  const formattedDates = selectedDates.map((date) => new Date(date));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // if (today.getDate() > 3) {
+  //   return {
+  //     isValid: false,
+  //     message: "WFH leave must be applied before the 3rd of the month.",
+  //   };
+  // }
+
+  const weeks = new Set();
+  for (const date of formattedDates) {
+    const weekNumber = Math.floor(
+      (date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000)
+    );
+    weeks.add(weekNumber);
+  }
+  if (formattedDates.length > weeks.size) {
     return {
       isValid: false,
-      message: "Please provide valid start and end dates",
+      message: "You can only apply for 1 WFH day per week.",
     };
   }
 
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
-  if (startDate.getDate() > 3) {
-    return {
-      isValid: false,
-      message: "WFH leave must be applied before the 3rd of the month.",
-    };
-  }
-
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
+  for (const date of formattedDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is in the past. Please select a future date.`,
+      };
     }
-  }
 
-  if (diffDays > 1) {
-    return {
-      isValid: false,
-      message: "You can only take 1 WFH day per week.",
-    };
+    if (isWeekendOrPublicHoliday(date)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+
+    const overlappingLeave = await Leave.findOne({
+      user: user,
+      dates: { $in: [date] },
+      status: "Approved",
+    });
+    if (overlappingLeave) {
+      return {
+        isValid: false,
+        message: `There is already an approved leave on ${
+          date.toISOString().split("T")[0]
+        }. Please select a different date.`,
+      };
+    }
   }
 
   const userRecord = await User.findOne({ slackId: user });
   const wfhLeavesTaken = userRecord ? userRecord.wfhLeave : 0;
+  const totalWFHLeaves = wfhLeavesTaken + selectedDates.length;
+  const remainingWFHLeaves = 4 - totalWFHLeaves;
 
-  if (wfhLeavesTaken + diffDays > 4) {
+  if (totalWFHLeaves > 4) {
     return {
       isValid: false,
-      message: "You have exceeded your monthly WFH leave limit of 4 days.",
+      message: `Exceeded the limit of 4 WFH leaves per month. You have ${
+        remainingWFHLeaves < 0 ? 0 : remainingWFHLeaves
+      } WFH leave days remaining.`,
     };
   }
+
+  console.log(
+    `WFH leave requested for the following dates: ${formattedDates
+      .map((date) => date.toISOString().split("T")[0])
+      .join(", ")}`
+  );
 
   return {
     isValid: true,
