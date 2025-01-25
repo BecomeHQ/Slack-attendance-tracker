@@ -387,40 +387,73 @@ const verifyUnpaidLeave = async (
   halfDays,
   reason
 ) => {
-  const currentDate = new Date();
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return { isValid: false, message: "No dates provided for unpaid leave." };
+  }
 
-  if (selectedDates.some((date) => new Date(date) < currentDate)) {
+  const dateSet = new Set(
+    selectedDates.map((date) => new Date(date).toDateString())
+  );
+  if (dateSet.size !== selectedDates.length) {
     return {
       isValid: false,
-      message: "Selected dates cannot contain past dates.",
+      message: "Two or more selected dates are the same.",
     };
   }
 
-  const userRecord = await User.findOne({ slackId: user });
-  if (!userRecord) {
+  const formatDate = (date) => {
+    if (typeof date === "string") {
+      date = new Date(date);
+    }
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new Error("Invalid date provided.");
+    }
+    return date;
+  };
+
+  const formattedDates = selectedDates.map(formatDate);
+  console.log("Formatted Dates for Verification:", formattedDates);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (const date of formattedDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } cannot be in the past.`,
+      };
+    }
+  }
+
+  const userData = await User.findOne({ slackId: user });
+  if (!userData) {
     return {
       isValid: false,
-      message: "User record not found.",
+      message: "User not found.",
     };
   }
 
-  const overlappingLeaves = await Leave.find({
-    user: user,
-    dates: { $in: selectedDates },
-    status: "Approved",
-  });
+  const totalLeaveDays = selectedDates.reduce((total, date, index) => {
+    return total + (halfDays[index] === "Full_Day" ? 1 : 0.5);
+  }, 0);
 
-  if (overlappingLeaves.length > 0) {
+  const totalUnpaidLeaves = userData.unpaidLeave || 0;
+  const totalLeaveCount = totalUnpaidLeaves + totalLeaveDays;
+
+  if (totalLeaveCount > 20) {
     return {
       isValid: false,
-      message:
-        "You have already applied for leave on one or more selected dates.",
+      message: `You have exceeded the limit of 20 unpaid leave days per year. You have ${
+        20 - totalUnpaidLeaves
+      } unpaid leave days remaining.`,
     };
   }
 
   let workingDays = 0;
-  for (let date of selectedDates) {
-    if (!isWeekendOrPublicHoliday(new Date(date))) {
+  for (let date of formattedDates) {
+    if (!isWeekendOrPublicHoliday(date)) {
       workingDays++;
     }
   }
@@ -440,7 +473,10 @@ const verifyUnpaidLeave = async (
     };
   } else {
     const fourWeeksInMillis = 1000 * 60 * 60 * 24 * 28;
-    const noticePeriod = new Date(currentDate.getTime() + fourWeeksInMillis);
+    const noticePeriod = new Date(today.getTime() + fourWeeksInMillis);
+    const earliestDate = new Date(
+      Math.min(...formattedDates.map((date) => date.getTime()))
+    );
     if (earliestDate < noticePeriod) {
       return {
         isValid: false,
@@ -448,14 +484,6 @@ const verifyUnpaidLeave = async (
           "A notice period of 4 weeks is required before taking unpaid leave for more than 3 days.",
       };
     }
-  }
-
-  let leaveAlreadyTaken = userRecord.unpaidLeave || 0;
-  if (leaveAlreadyTaken + workingDays > 20) {
-    return {
-      isValid: false,
-      message: `You have already taken ${leaveAlreadyTaken} days of unpaid leave. You can only take up to 20 days in total per year.`,
-    };
   }
 
   return {

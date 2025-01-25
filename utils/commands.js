@@ -1724,14 +1724,80 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select start date",
+                text: "Select date",
               },
               action_id: "date_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Start Date",
+              text: "Date 1",
             },
+          },
+          {
+            type: "input",
+            block_id: "leave_type_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
           },
           {
             type: "input",
@@ -1740,13 +1806,162 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
               type: "datepicker",
               placeholder: {
                 type: "plain_text",
-                text: "Select end date",
+                text: "Select date",
               },
               action_id: "date_select_2",
             },
             label: {
               type: "plain_text",
-              text: "End Date",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 3",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Full Day",
+                  },
+                  value: "Full_Day",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Half Day",
+                  },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_3",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "First Half",
+                  },
+                  value: "First_Half",
+                },
+                {
+                  text: {
+                    type: "plain_text",
+                    text: "Second Half",
+                  },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day",
             },
             optional: true,
           },
