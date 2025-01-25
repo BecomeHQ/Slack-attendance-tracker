@@ -773,7 +773,6 @@ const rejectLeave = async ({ ack, body, client, action }) => {
     if (!leaveRequest) {
       throw new Error("Leave request not found");
     }
-
     await client.chat.update({
       channel: body.channel.id,
       ts: body.message.ts,
@@ -784,18 +783,22 @@ const rejectLeave = async ({ ack, body, client, action }) => {
     await client.chat.postMessage({
       channel: leaveRequest.user,
       text: `Your leave request from ${formatDate(
-        leaveRequest.fromDate
-      )} to ${formatDate(leaveRequest.toDate)} has been rejected.`,
+        formatDate(leaveRequest.dates[0])
+      )} to ${formatDate(
+        formatDate(leaveRequest.dates[leaveRequest.dates.length - 1])
+      )} has been rejected.`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
             text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${formatDate(
-              leaveRequest.fromDate
+              formatDate(leaveRequest.dates[0])
             )} to ${formatDate(
-              leaveRequest.toDate
-            )}\n\nPlease contact your lead for more info.`,
+              formatDate(leaveRequest.dates[leaveRequest.dates.length - 1])
+            )}\n*Leave Type:* ${
+              leaveRequest.leaveType
+            }\n\nPlease contact your lead for more info.`,
           },
         },
       ],
@@ -2953,18 +2956,32 @@ const approveLeave = async ({ ack, body, client, action }) => {
     let approvalMessage;
     console.log({ leaveRequest });
 
+    const leaveDetails = `*From Date:* ${new Date(
+      leaveRequest.dates[0]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(
+      leaveRequest.dates[leaveRequest.dates.length - 1]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${leaveRequest.reason || "No reason provided"}`;
+
     if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
       remainingLeaveBalance = 12 - user.sickLeave;
       approvalMessage = `🤒 Your sick leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!`;
+        leaveRequest.dates[0]
+      )} is approved. Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!\n\n${leaveDetails}\n\n*Remaining Sick Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Burnout_Leave") {
       user.burnout = (user.burnout || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.burnout;
       approvalMessage = `🧠 Your burnout leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!`;
+        leaveRequest.dates[0]
+      )} is approved. Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!\n\n${leaveDetails}\n\n*Remaining Burnout Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Paternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);
@@ -2982,34 +2999,35 @@ const approveLeave = async ({ ack, body, client, action }) => {
       user.paternityLeave = (user.paternityLeave || 0) + diffDays;
       remainingLeaveBalance = 20 - user.paternityLeave;
       approvalMessage = `🍼 Your paternity leave starting ${formatDate(
-        leaveRequest.fromDate
-      )} is approved! Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.`;
+        leaveRequest.dates[0]
+      )} is approved! Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.\n\n${leaveDetails}\n\n*Remaining Paternity Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Casual_Leave") {
       user.casualLeave = (user.casualLeave || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.casualLeave;
       approvalMessage = `🌼 Your casual leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved! Wishing you a peaceful and refreshing break. Enjoy your time off!`;
+        leaveRequest.dates[0]
+      )} is approved! Wishing you a peaceful and refreshing break. Enjoy your time off!\n\n${leaveDetails}\n\n*Remaining Casual Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Bereavement_Leave") {
       approvalMessage = `🕊️ Your bereavement leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.`;
+        leaveRequest.dates[0]
+      )} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.\n\n${leaveDetails}`;
       user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
       remainingLeaveBalance = 5 - user.bereavementLeave;
+      approvalMessage += `\n\n*Remaining Bereavement Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
       user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.restrictedHoliday;
       approvalMessage = `🌴 Your leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved! You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!`;
+        leaveRequest.dates[0]
+      )} is approved! You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!\n\n${leaveDetails}\n\n*Remaining Restricted Holiday Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Mensural_Leave") {
       console.log("Mensural Leave");
 
       user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
       remainingLeaveBalance = 18 - user.mensuralLeaves;
       approvalMessage = `💗 Your menstrual leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. Rest well and take care. Let us know if you need any support.`;
+        leaveRequest.dates[0]
+      )} is approved. Rest well and take care. Let us know if you need any support.\n\n${leaveDetails}\n\n*Remaining Mensural Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);
@@ -3027,25 +3045,25 @@ const approveLeave = async ({ ack, body, client, action }) => {
       user.maternityLeave = (user.maternityLeave || 0) + diffDays;
       remainingLeaveBalance = 65 - user.maternityLeave;
       approvalMessage = `👶 Your maternity leave starting ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. Wishing you a joyful and safe journey into motherhood. We can't wait to meet your little one someday!`;
+        leaveRequest.dates[0]
+      )} is approved. Wishing you a joyful and safe journey into motherhood. We can't wait to meet your little one someday!\n\n${leaveDetails}\n\n*Remaining Maternity Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Unpaid_Leave") {
       user.unpaidLeave = (user.unpaidLeave || 0) + leaveDays;
       remainingLeaveBalance = 20 - user.unpaidLeave;
       approvalMessage = `📝 Your unpaid leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.`;
+        leaveRequest.dates[0]
+      )} is approved. We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.\n\n${leaveDetails}\n\n*Remaining Unpaid Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Work_from_Home") {
       user.wfhLeave = (user.wfhLeave || 0) + leaveDays;
       remainingLeaveBalance = 4 - user.wfhLeave;
       approvalMessage = `🏡 Your WFH day for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved! Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!`;
+        leaveRequest.dates[0]
+      )} is approved! Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!\n\n${leaveDetails}\n\n*Remaining WFH Leave Balance:* ${remainingLeaveBalance} days`;
     } else if (leaveRequest.leaveType === "Internship_Leave") {
       user.internshipLeave = (user.internshipLeave || 0) + leaveDays;
       approvalMessage = `📚 Your leave for ${formatDate(
-        leaveRequest.fromDate
-      )} is approved. Take your well-deserved break!`;
+        leaveRequest.dates[0]
+      )} is approved. Take your well-deserved break!\n\n${leaveDetails}`;
     }
 
     await user.save();
@@ -3152,7 +3170,11 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
 
   const leaveDetails = selectedDates
     .map((date, index) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
+      const fromDate = new Date(date).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
       const leaveType = leaveTypes[index];
       const halfDay = halfDays[index];
       return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
@@ -3218,7 +3240,13 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     await client.chat.postMessage({
       channel: user,
       text: `Sick leave request submitted successfully for the following dates: ${selectedDates
-        .map((date) => new Date(date).toISOString().split("T")[0])
+        .map((date) =>
+          new Date(date).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        )
         .join(", ")}.`,
     });
   } catch (error) {
@@ -3293,7 +3321,11 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
 
   const leaveDetails = selectedDates
     .map((date, index) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
+      const fromDate = new Date(date).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
       const leaveType = leaveTypes[index];
       const halfDay = halfDays[index];
       return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
@@ -3423,7 +3455,11 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
 
   const leaveDetails = selectedDates
     .map((date, index) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
+      const fromDate = new Date(date).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
       const leaveType = leaveTypes[index];
       const halfDay = halfDays[index];
       return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
@@ -3553,14 +3589,19 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
     return;
   }
 
-  const leaveDetails = selectedDates
-    .map((date, index) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
-      const leaveType = leaveTypes[index];
-      const halfDay = halfDays[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
-    })
-    .join("\n\n");
+  const leaveDetails = `*From Date:* ${new Date(
+    selectedDates[0]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*To Date:* ${new Date(
+    selectedDates[selectedDates.length - 1]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*Reason:* ${reason}`;
 
   try {
     const leave = new Leave({
@@ -3656,12 +3697,19 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       return;
     }
 
-    const leaveDetails = selectedDates
-      .map((date) => {
-        const fromDate = new Date(date).toISOString().split("T")[0];
-        return `*Date:* ${fromDate}\n*Type:* Full Day`;
-      })
-      .join("\n\n");
+    const leaveDetails = `*From Date:* ${new Date(
+      selectedDates[0]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(
+      selectedDates[selectedDates.length - 1]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${reason || "No reason provided"}`;
 
     try {
       const leave = new Leave({
@@ -3688,8 +3736,33 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+              text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
             },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Approve",
+                  emoji: true,
+                },
+                style: "primary",
+                action_id: `approve_leave_${leave._id}`,
+              },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Reject",
+                  emoji: true,
+                },
+                style: "danger",
+                action_id: `reject_leave_${leave._id}`,
+              },
+            ],
           },
         ],
       });
@@ -3697,7 +3770,13 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       await client.chat.postMessage({
         channel: user,
         text: `Burnout leave request submitted successfully for the following dates: ${selectedDates
-          .map((date) => new Date(date).toISOString().split("T")[0])
+          .map((date) =>
+            new Date(date).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          )
           .join(", ")}.`,
       });
     } catch (error) {
@@ -3764,7 +3843,14 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
     await leave.save();
 
     const leaveDetails = selectedDates
-      .map((date) => `*Date:* ${date}\n*Type:* Full_Day\n*Half Day:* Full_Day`)
+      .map((date) => {
+        const formattedDate = new Date(date).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        return `*Date:* ${formattedDate}\n*Type:* Full_Day\n*Half Day:* Full_Day`;
+      })
       .join("\n\n");
 
     await client.chat.postMessage({
@@ -3781,8 +3867,33 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New WFH leave request received!\n\n${leaveDetails}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
         },
       ],
     });
@@ -3836,11 +3947,18 @@ const handleBereavementLeaveSubmission = async ({
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${
-      new Date(startDate).toISOString().split("T")[0]
-    }\n*To Date:* ${
-      new Date(endDate).toISOString().split("T")[0]
-    }\n*Reason:* ${reason}`;
+    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
+      "en-US",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${reason}`;
 
     await client.chat.postMessage({
       channel: user,
@@ -3856,8 +3974,33 @@ const handleBereavementLeaveSubmission = async ({
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New bereavement leave request received!\n\n${leaveDetails}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
         },
       ],
     });
@@ -3906,11 +4049,18 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${
-      new Date(startDate).toISOString().split("T")[0]
-    }\n*To Date:* ${
-      new Date(endDate).toISOString().split("T")[0]
-    }\n*Reason:* ${reason}`;
+    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
+      "en-US",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${reason}`;
 
     await client.chat.postMessage({
       channel: user,
@@ -3926,7 +4076,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New maternity leave request received!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4001,11 +4151,18 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${
-      new Date(startDate).toISOString().split("T")[0]
-    }\n*To Date:* ${
-      new Date(endDate).toISOString().split("T")[0]
-    }\n*Reason:* ${reason}`;
+    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
+      "en-US",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${reason}`;
 
     await client.chat.postMessage({
       channel: user,
@@ -4021,8 +4178,33 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New paternity leave request received!\n\n${leaveDetails}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
         },
       ],
     });
@@ -4069,12 +4251,19 @@ const handleRestrictedHolidaySubmission = async ({
     return;
   }
 
-  const leaveDetails = selectedDates
-    .map((date) => {
-      const fromDate = new Date(date).toISOString().split("T")[0];
-      return `*Date:* ${fromDate}\n*Type:* Full Day`;
-    })
-    .join("\n\n");
+  const leaveDetails = `*From Date:* ${new Date(
+    selectedDates[0]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*To Date:* ${new Date(
+    selectedDates[selectedDates.length - 1]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*Reason:* ${reason}`;
 
   try {
     const leave = new Leave({
@@ -4101,8 +4290,33 @@ const handleRestrictedHolidaySubmission = async ({
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
         },
       ],
     });
@@ -4179,9 +4393,19 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     await leave.save();
 
-    const leaveDetails = `*Reason:* ${reason}\n*Dates:* ${selectedDates
-      .map((date) => formatDate(date))
-      .join(", ")}`;
+    const leaveDetails = `*From Date:* ${new Date(
+      selectedDates[0]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(
+      selectedDates[selectedDates.length - 1]
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*Reason:* ${reason || "No reason provided"}`;
 
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
@@ -4192,8 +4416,33 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
           },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
         },
       ],
     });
