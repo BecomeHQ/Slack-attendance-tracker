@@ -1605,89 +1605,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           {
             type: "input",
-            block_id: "dates_3",
-            element: {
-              type: "datepicker",
-              placeholder: {
-                type: "plain_text",
-                text: "Select date",
-              },
-              action_id: "date_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Date 3",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "leave_type_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select leave type",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Full Day",
-                  },
-                  value: "Full_Day",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Leave Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "First Half",
-                  },
-                  value: "First_Half",
-                },
-                {
-                  text: {
-                    type: "plain_text",
-                    text: "Second Half",
-                  },
-                  value: "Second_Half",
-                },
-              ],
-              action_id: "half_day_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Half Day",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
             block_id: "reason",
             element: {
               type: "plain_text_input",
@@ -2830,9 +2747,14 @@ const approveLeave = async ({ ack, body, client, action }) => {
       approvalMessage = `🌴 Your leave for ${formatDate(
         leaveRequest.fromDate
       )} is approved! Hope you make the most of your break. Take this time to relax and recharge!`;
-    } else if (leaveRequest.leaveType === "Mensural_Leaves") {
+    } else if (leaveRequest.leaveType === "Mensural_Leave") {
+      console.log("Mensural Leave");
+
       user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
       remainingLeaveBalance = 18 - user.mensuralLeaves;
+      approvalMessage = `💗 Your menstrual leave for ${formatDate(
+        leaveRequest.fromDate
+      )} is approved. Rest well and take care. Let us know if you need any support.`;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);

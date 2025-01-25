@@ -682,69 +682,151 @@ const verifyInternshipLeave = async (user, fromDate, toDate) => {
   };
 };
 
-const verifyMensuralLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-
-  if (!startDate || !endDate) {
+const verifyMensuralLeave = async (
+  user,
+  selectedDates,
+  leaveTypes,
+  halfDays,
+  reason
+) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
     return {
       isValid: false,
-      message: "Please provide valid start and end dates",
+      message: "No dates provided for menstrual leave.",
     };
   }
 
-  if (startDate > endDate) {
+  const dateSet = new Set(
+    selectedDates.map((date) => new Date(date).toDateString())
+  );
+  if (dateSet.size !== selectedDates.length) {
     return {
       isValid: false,
-      message: "Start date cannot be after end date",
+      message: "Two or more selected dates are the same.",
     };
   }
 
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
+  const formatDate = (date) => {
+    if (typeof date === "string") {
+      date = new Date(date);
+    }
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new Error("Invalid date provided.");
+    }
+    return date;
+  };
+
+  const formattedMensuralLeaveDates = selectedDates.map(formatDate);
+  console.log("Formatted Dates for Verification:", formattedMensuralLeaveDates);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (const date of formattedMensuralLeaveDates) {
+    if (date < today) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } cannot be in the past.`,
+      };
     }
   }
 
-  let mensuralLeavesTaken = 0;
-  try {
-    const leaves = await Leave.find({ user, leaveType: "mensural" });
-    const currentYear = startDate.getFullYear();
-    const leavesThisYear = leaves.filter((leave) => {
-      const leaveDate = new Date(leave.fromDate);
-      return leaveDate.getFullYear() === currentYear;
+  const userData = await User.findOne({ slackId: user });
+  if (!userData) {
+    return {
+      isValid: false,
+      message: "User data not found.",
+    };
+  }
+
+  const totalLeaveDays = selectedDates.reduce((total, date, index) => {
+    return total + (halfDays[index] === "Full_Day" ? 1 : 0.5);
+  }, 0);
+
+  const totalMensuralLeaves = userData.mensuralLeave + totalLeaveDays;
+  const remainingMensuralLeaves = 18 - totalMensuralLeaves;
+  if (totalMensuralLeaves > 18) {
+    return {
+      isValid: false,
+      message: `Exceeded the limit of 18 paid menstrual leaves per year. You have ${
+        remainingMensuralLeaves < 0 ? 0 : remainingMensuralLeaves
+      } menstrual leave days remaining.`,
+    };
+  }
+
+  const currentMonth = new Date().getMonth();
+  const leavesThisMonth = await Leave.find({
+    user: user,
+    leaveType: "Mensural_Leave",
+    dates: {
+      $elemMatch: {
+        $gte: new Date(new Date().getFullYear(), currentMonth, 1),
+        $lte: new Date(new Date().getFullYear(), currentMonth + 1, 0),
+      },
+    },
+  });
+
+  console.log(
+    new Date(new Date().getFullYear(), currentMonth, 1),
+    new Date(new Date().getFullYear(), currentMonth + 1, 0)
+  );
+
+  console.log("hello1");
+  const mensuralLeavesThisMonth = leavesThisMonth.reduce((acc, leave) => {
+    console.log("hello");
+    console.log(leave);
+    return (
+      acc +
+      leave.dates.reduce((count, date) => {
+        const leaveDate = new Date(date);
+        console.log(leave, leaveDate);
+
+        if (!isWeekendOrPublicHoliday(leaveDate)) {
+          return count + (leave.leaveDay[0] === "Half_Day" ? 0.5 : 1);
+        }
+        return count;
+      }, 0)
+    );
+  }, 0);
+
+  if (mensuralLeavesThisMonth + totalLeaveDays > 1.5) {
+    return {
+      isValid: false,
+      message:
+        "You cannot apply for more than 1.5 menstrual leave days in a month.",
+    };
+  }
+
+  for (const date of formattedMensuralLeaveDates) {
+    if (isWeekendOrPublicHoliday(date)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          date.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+
+    const overlappingLeave = await Leave.findOne({
+      user: user,
+      dates: date,
+      status: "Approved",
     });
-    mensuralLeavesTaken = leavesThisYear.length;
-  } catch (err) {
-    console.error(err);
-    return {
-      isValid: false,
-      message:
-        "An error occurred while fetching your leave records. Please try again later.",
-    };
-  }
-
-  if (mensuralLeavesTaken + diffDays > 18) {
-    return {
-      isValid: false,
-      message:
-        "You have exceeded your yearly menstrual leave limit of 18 days. Please contact HR for additional support.",
-    };
-  }
-
-  if (diffDays > 2) {
-    return {
-      isValid: false,
-      message:
-        "For those needing more than 2 days at a time, additional leave may be provided based on your circumstances.",
-    };
+    if (overlappingLeave) {
+      return {
+        isValid: false,
+        message: `There is already an approved leave on ${
+          date.toISOString().split("T")[0]
+        }. Please select a different date.`,
+      };
+    }
   }
 
   return {
     isValid: true,
     message:
-      "Menstrual leave request is valid. Leaves can be taken as 1 full day and a half-day, or split into half-days as needed. Inform your lead or team in advance when possible to ensure smooth workflow management. Menstrual health is not one-size-fits-all. This policy reflects our commitment to supporting your physical and mental well-being, offering flexibility for those who need it most, while maintaining fairness across the team.",
+      "Menstrual leave request is valid. Leaves can be taken as 1 full day and a half-day, or split into half-days as needed.",
   };
 };
 
