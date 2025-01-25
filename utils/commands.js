@@ -3178,13 +3178,13 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3319,7 +3319,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
@@ -3458,13 +3458,13 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New mensural leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New mensural leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3581,13 +3581,13 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New unpaid leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New unpaid leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3682,39 +3682,14 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       const adminUserId = process.env.ADMIN_USER_ID;
       await client.chat.postMessage({
         channel: adminUserId,
-        text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+        text: `New leave request received!`,
         blocks: [
           {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+              text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
             },
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Approve",
-                  emoji: true,
-                },
-                style: "primary",
-                action_id: `approve_leave_${leave._id}`,
-              },
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Reject",
-                  emoji: true,
-                },
-                style: "danger",
-                action_id: `reject_leave_${leave._id}`,
-              },
-            ],
           },
         ],
       });
@@ -3800,39 +3775,14 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New WFH request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New WFH leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
         },
       ],
     });
@@ -3900,39 +3850,14 @@ const handleBereavementLeaveSubmission = async ({
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New Bereavement Leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New Bereavement Leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
         },
       ],
     });
@@ -3995,13 +3920,13 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New Maternity Leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New Maternity Leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4090,39 +4015,14 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New Paternity Leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New Paternity Leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
         },
       ],
     });
@@ -4195,39 +4095,14 @@ const handleRestrictedHolidaySubmission = async ({
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
         },
       ],
     });
@@ -4311,39 +4186,14 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
+      text: `New leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
           },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-                emoji: true,
-              },
-              style: "primary",
-              action_id: `approve_leave_${leave._id}`,
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Reject",
-                emoji: true,
-              },
-              style: "danger",
-              action_id: `reject_leave_${leave._id}`,
-            },
-          ],
         },
       ],
     });
