@@ -745,9 +745,7 @@ const verifyMaternityLeave = async (user, fromDate, toDate) => {
       diffDays++;
     }
   }
-
-  const diffTime = Math.abs(endDate - startDate);
-  const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+  console.log(diffDays);
 
   let maternityLeavesTaken = 0;
   try {
@@ -768,14 +766,14 @@ const verifyMaternityLeave = async (user, fromDate, toDate) => {
   const remainingMaternityLeaves =
     totalMaternityLeaveLimit - maternityLeavesTaken;
 
-  if (maternityLeavesTaken + diffWeeks > totalMaternityLeaveLimit) {
+  if (maternityLeavesTaken + diffDays > totalMaternityLeaveLimit) {
     return {
       isValid: false,
-      message: `You have exceeded your maternity leave limit of ${totalMaternityLeaveLimit} weeks. You have ${remainingMaternityLeaves} weeks remaining. Please contact HR for additional support.`,
+      message: `You have exceeded your maternity leave limit of ${totalMaternityLeaveLimit} days. You have ${remainingMaternityLeaves} days remaining. Please contact HR for additional support.`,
     };
   }
 
-  if (diffWeeks > 9) {
+  if (diffDays > 65) {
     return {
       isValid: false,
       message: "Maternity leave cannot exceed 65 days.",
