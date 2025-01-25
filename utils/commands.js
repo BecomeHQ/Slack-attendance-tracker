@@ -2659,8 +2659,7 @@ const onLeave = async ({ command, ack, client, body }) => {
 
   try {
     const leavesToday = await Leave.find({
-      fromDate: { $lte: today },
-      toDate: { $gte: today },
+      dates: { $elemMatch: { $lte: today } },
       status: "Approved",
     });
 
@@ -2674,9 +2673,11 @@ const onLeave = async ({ command, ack, client, body }) => {
 
     const leaveDetails = leavesToday
       .map((leave) => {
-        return `*User:* <@${leave.user}>\n*From:* ${formatDate(
-          leave.fromDate
-        )}\n*To:* ${formatDate(leave.toDate)}\n*Reason:* ${leave.reason}`;
+        return `*User:* <@${leave.user}>\n*Dates:* ${leave.dates
+          .map(formatDate)
+          .join(", ")}\n*Reason:* ${leave.reason}\n*Leave Type:* ${
+          leave.leaveType
+        }`;
       })
       .join("\n\n");
 
@@ -2722,15 +2723,17 @@ const checkBalance = async ({ command, ack, client, body }) => {
     };
 
     const leaveBalances = {
-      sickLeave: totalLeaves.sickLeave - user.sickLeave,
-      restrictedHoliday: totalLeaves.restrictedHoliday - user.restrictedHoliday,
-      burnout: totalLeaves.burnout - user.burnout,
-      mensuralLeaves: totalLeaves.mensuralLeaves - user.mensuralLeaves,
-      casualLeave: totalLeaves.casualLeave - user.casualLeave,
-      maternityLeave: totalLeaves.maternityLeave - user.maternityLeave,
-      unpaidLeave: totalLeaves.unpaidLeave - user.unpaidLeave,
-      paternityLeave: totalLeaves.paternityLeave - user.paternityLeave,
-      bereavementLeave: totalLeaves.bereavementLeave - user.bereavementLeave,
+      sickLeave: totalLeaves.sickLeave - (user.sickLeave || 0),
+      restrictedHoliday:
+        totalLeaves.restrictedHoliday - (user.restrictedHoliday || 0),
+      burnout: totalLeaves.burnout - (user.burnout || 0),
+      mensuralLeaves: totalLeaves.mensuralLeaves - (user.mensuralLeaves || 0),
+      casualLeave: totalLeaves.casualLeave - (user.casualLeave || 0),
+      maternityLeave: totalLeaves.maternityLeave - (user.maternityLeave || 0),
+      unpaidLeave: totalLeaves.unpaidLeave - (user.unpaidLeave || 0),
+      paternityLeave: totalLeaves.paternityLeave - (user.paternityLeave || 0),
+      bereavementLeave:
+        totalLeaves.bereavementLeave - (user.bereavementLeave || 0),
     };
 
     const leaveBalanceMessage = `
@@ -2805,7 +2808,7 @@ const upcomingLeaves = async ({ command, ack, client, body }) => {
 
   try {
     const upcomingLeaves = await Leave.find({
-      fromDate: { $gte: today },
+      dates: { $elemMatch: { $gte: new Date(today) } },
       status: "Approved",
     });
 
@@ -2821,9 +2824,11 @@ const upcomingLeaves = async ({ command, ack, client, body }) => {
 
     const leaveDetails = upcomingLeaves
       .map((leave) => {
-        return `*User:* <@${leave.user}>\n*From:* ${formatDate(
-          leave.fromDate
-        )}\n*To:* ${formatDate(leave.toDate)}\n*Reason:* ${leave.reason}`;
+        return `*User:* <@${leave.user}>\n*Dates:* ${leave.dates
+          .map(formatDate)
+          .join(", ")}\n*Leave Type:* ${leave.leaveType}\n*Reason:* ${
+          leave.reason
+        }`;
       })
       .join("\n\n");
 
