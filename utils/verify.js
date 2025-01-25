@@ -380,101 +380,68 @@ const verifyCasualLeave = async (
   };
 };
 
-const verifyBereavementLeave = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-
-  if (!startDate || !endDate) {
-    return {
-      isValid: false,
-      message: "Please provide valid start and end dates",
-    };
-  }
-
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
-    }
-  }
-
-  const userRecord = await User.findOne({ slackId: user });
-  const remainingBereavementLeave =
-    5 - (userRecord ? userRecord.bereavementLeave : 0);
-  if (remainingBereavementLeave <= 0) {
-    return {
-      isValid: false,
-      message: "You have exhausted your paid bereavement leave.",
-    };
-  }
-
-  if (diffDays > remainingBereavementLeave) {
-    return {
-      isValid: false,
-      message: `You can only take up to ${remainingBereavementLeave} days of paid bereavement leave. For additional leave, please contact admin.`,
-    };
-  }
-
-  return {
-    isValid: true,
-    message: `🕊️ Your bereavement leave for ${fromDate} to ${toDate} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.`,
-  };
-};
-
-const verifyUnpaidLeave = async (user, fromDate, toDate) => {
+const verifyUnpaidLeave = async (
+  user,
+  selectedDates,
+  leaveTypes,
+  halfDays,
+  reason
+) => {
   const currentDate = new Date();
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
 
-  if (!startDate || !endDate) {
+  if (selectedDates.some((date) => new Date(date) < currentDate)) {
     return {
       isValid: false,
-      message: "Please provide valid start and end dates",
-    };
-  }
-
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
-    }
-  }
-
-  if (diffDays > 20) {
-    return {
-      isValid: false,
-      message:
-        "You may take leave without pay for a maximum of 20 working days.",
+      message: "Selected dates cannot contain past dates.",
     };
   }
 
   const userRecord = await User.findOne({ slackId: user });
-  if (userRecord.yearsOfService < 2) {
+  if (!userRecord) {
     return {
       isValid: false,
-      message:
-        "You must have a minimum of 2 years of service to apply for unpaid leave.",
+      message: "User record not found.",
     };
   }
 
-  if (diffDays > 3) {
+  const overlappingLeaves = await Leave.find({
+    user: user,
+    dates: { $in: selectedDates },
+    status: "Approved",
+  });
+
+  if (overlappingLeaves.length > 0) {
+    return {
+      isValid: false,
+      message:
+        "You have already applied for leave on one or more selected dates.",
+    };
+  }
+
+  let workingDays = 0;
+  for (let date of selectedDates) {
+    if (!isWeekendOrPublicHoliday(new Date(date))) {
+      workingDays++;
+    }
+  }
+
+  if (workingDays > 20) {
+    return {
+      isValid: false,
+      message:
+        "You may take leave without pay for a maximum of 20 working days per year.",
+    };
+  }
+
+  if (workingDays <= 3) {
+    return {
+      isValid: true,
+      message: "Unpaid leave request for up to 3 days is approved immediately.",
+    };
+  } else {
     const fourWeeksInMillis = 1000 * 60 * 60 * 24 * 28;
     const noticePeriod = new Date(currentDate.getTime() + fourWeeksInMillis);
-    if (startDate < noticePeriod) {
+    if (earliestDate < noticePeriod) {
       return {
         isValid: false,
         message:
@@ -483,25 +450,11 @@ const verifyUnpaidLeave = async (user, fromDate, toDate) => {
     }
   }
 
-  let leaveAlreadyTaken = 0;
-  try {
-    const userData = await User.findOne({ slackId: user });
-    if (userData) {
-      leaveAlreadyTaken = userData.unpaidLeave;
-    }
-  } catch (err) {
-    console.error(err);
+  let leaveAlreadyTaken = userRecord.unpaidLeave || 0;
+  if (leaveAlreadyTaken + workingDays > 20) {
     return {
       isValid: false,
-      message:
-        "An error occurred while fetching your leave records. Please try again later.",
-    };
-  }
-
-  if (leaveAlreadyTaken + diffDays > 20) {
-    return {
-      isValid: false,
-      message: `You have already taken ${leaveAlreadyTaken} days of unpaid leave. You can only take up to 20 days in total.`,
+      message: `You have already taken ${leaveAlreadyTaken} days of unpaid leave. You can only take up to 20 days in total per year.`,
     };
   }
 
@@ -509,6 +462,117 @@ const verifyUnpaidLeave = async (user, fromDate, toDate) => {
     isValid: true,
     message:
       "Unpaid leave request is valid. Please ensure you remain under employment during this period.",
+  };
+};
+
+const verifyBereavementLeave = async (user, fromDate, toDate) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(fromDate);
+  const endDate = new Date(toDate);
+
+  if (
+    !startDate ||
+    !endDate ||
+    isNaN(startDate.getTime()) ||
+    isNaN(endDate.getTime())
+  ) {
+    return {
+      isValid: false,
+      message: "Please provide valid start and end dates.",
+    };
+  }
+
+  if (startDate > endDate) {
+    return {
+      isValid: false,
+      message: "Start date cannot be after end date.",
+    };
+  }
+
+  if (startDate < today) {
+    return {
+      isValid: false,
+      message: "Start date cannot be a past date.",
+    };
+  }
+
+  const userRecord = await User.findOne({ slackId: user });
+  if (!userRecord) {
+    return {
+      isValid: false,
+      message: "User record not found.",
+    };
+  }
+
+  // Create a list of all dates between startDate and endDate
+  const dateList = [];
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    dateList.push(new Date(d));
+  }
+
+  // Check each date to see if it exists in any existing leaves
+  const existingLeaves = await Leave.find({
+    user: user,
+    dates: { $in: dateList },
+  });
+
+  if (existingLeaves.length > 0) {
+    const conflictingDates = existingLeaves
+      .map((leave) =>
+        leave.dates.filter((date) =>
+          dateList.some((d) => d.getTime() === date.getTime())
+        )
+      )
+      .flat();
+    const uniqueConflictingDates = [
+      ...new Set(
+        conflictingDates.map((date) => date.toISOString().split("T")[0])
+      ),
+    ];
+    return {
+      isValid: false,
+      message: `You are already on leave for the following dates: ${uniqueConflictingDates.join(
+        ", "
+      )}.`,
+    };
+  }
+
+  let diffDays = 0;
+  dateList.forEach((d) => {
+    if (!isWeekendOrPublicHoliday(d)) {
+      diffDays++;
+    }
+  });
+
+  if (diffDays > 5) {
+    return {
+      isValid: false,
+      message:
+        "You can only take a maximum of 5 bereavement leave days at a time.",
+    };
+  }
+
+  const totalBereavementLeaveTaken = userRecord.bereavementLeave || 0;
+  const remainingBereavementLeave = 5 - totalBereavementLeaveTaken;
+
+  if (totalBereavementLeaveTaken >= 5) {
+    return {
+      isValid: false,
+      message: "You have exhausted your paid bereavement leave for the year.",
+    };
+  }
+
+  if (diffDays > remainingBereavementLeave) {
+    return {
+      isValid: false,
+      message: `You can only take up to ${remainingBereavementLeave} more days of paid bereavement leave this year. For additional leave, please contact admin.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    message: `🕊️ Your bereavement leave for ${fromDate} to ${toDate} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.`,
   };
 };
 
