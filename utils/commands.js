@@ -265,6 +265,14 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 },
                 action_id: "select_maternity_leave",
               },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Paternity Leave",
+                },
+                action_id: "select_paternity_leave",
+              },
             ],
           },
         ],
@@ -1949,6 +1957,76 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
     } catch (error) {
       console.error("Failed to open maternity leave modal:", error);
     }
+  } else if (action.action_id === "select_paternity_leave") {
+    try {
+      await client.views.update({
+        view_id: body.view.id,
+        view: {
+          type: "modal",
+          callback_id: "paternity_leave_application_modal",
+          title: {
+            type: "plain_text",
+            text: "Paternity Leave",
+          },
+          blocks: [
+            {
+              type: "input",
+              block_id: "start_date",
+              element: {
+                type: "datepicker",
+                initial_date: new Date().toISOString().split("T")[0],
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select start date",
+                },
+                action_id: "start_date_select",
+              },
+              label: {
+                type: "plain_text",
+                text: "Start Date",
+              },
+            },
+            {
+              type: "input",
+              block_id: "end_date",
+              element: {
+                type: "datepicker",
+                initial_date: new Date().toISOString().split("T")[0],
+                placeholder: {
+                  type: "plain_text",
+                  text: "Select end date",
+                },
+                action_id: "end_date_select",
+              },
+              label: {
+                type: "plain_text",
+                text: "End Date",
+              },
+              optional: true,
+            },
+            {
+              type: "input",
+              block_id: "reason",
+              element: {
+                type: "plain_text_input",
+                multiline: true,
+                action_id: "reason_input",
+              },
+              label: {
+                type: "plain_text",
+                text: "Reason",
+              },
+            },
+          ],
+          submit: {
+            type: "plain_text",
+            text: "Submit",
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to open paternity leave modal:", error);
+    }
   }
 };
 
@@ -2501,7 +2579,20 @@ const approveLeave = async ({ ack, body, client, action }) => {
         leaveRequest.fromDate
       )} is approved. Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!`;
     } else if (leaveRequest.leaveType === "Paternity_Leave") {
-      user.paternityLeave = (user.paternityLeave || 0) + leaveDays;
+      let diffDays = 0;
+      let startDate = new Date(leaveRequest.dates[0]);
+      let endDate = new Date(leaveRequest.dates[1]);
+      for (
+        let d = new Date(startDate);
+        d <= endDate;
+        d.setDate(d.getDate() + 1)
+      ) {
+        if (!isWeekendOrPublicHoliday(d)) {
+          diffDays++;
+        }
+      }
+      console.log(diffDays);
+      user.paternityLeave = (user.paternityLeave || 0) + diffDays;
       remainingLeaveBalance = 20 - user.paternityLeave;
       approvalMessage = `🍼 Your paternity leave starting ${formatDate(
         leaveRequest.fromDate
@@ -3530,6 +3621,101 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
+const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+
+  const user = body.user.id;
+  const startDate =
+    view.state.values.start_date.start_date_select.selected_date;
+  const endDate =
+    view.state.values.end_date.end_date_select.selected_date || startDate;
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  const verificationResult = await verifyPaternityLeave(
+    user,
+    startDate,
+    endDate
+  );
+
+  if (!verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `Failed to submit paternity leave request: ${verificationResult.message}.`,
+    });
+    return;
+  }
+
+  try {
+    const leave = new Leave({
+      user,
+      dates: [startDate, endDate],
+      leaveDay: "Full_Day",
+      leaveTime: "Full_day",
+      reason,
+      leaveType: "Paternity_Leave",
+    });
+    await leave.save();
+
+    const leaveDetails = `*From Date:* ${
+      new Date(startDate).toISOString().split("T")[0]
+    }\n*To Date:* ${
+      new Date(endDate).toISOString().split("T")[0]
+    }\n*Reason:* ${reason}`;
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your paternity leave request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New Paternity Leave request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New Paternity Leave request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error saving leave to database:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your Paternity Leave request. Please try again later.`,
+    });
+  }
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -3555,4 +3741,5 @@ module.exports = {
   handleWorkFromHomeSubmission,
   handleBereavementLeaveSubmission,
   handleMaternityLeaveSubmission,
+  handlePaternityLeaveSubmission,
 };

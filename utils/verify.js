@@ -822,15 +822,14 @@ const verifyPaternityLeave = async (user, fromDate, toDate) => {
     }
   }
 
-  const diffDaysCount = Math.ceil(
-    (endDate - startDate) / (1000 * 60 * 60 * 24)
-  );
-
-  let paternityLeavesTaken = 0;
+  let userData;
   try {
-    const userData = await User.findOne({ slackId: user });
-    if (userData) {
-      paternityLeavesTaken = userData.paternityLeave;
+    userData = await User.findOne({ slackId: user });
+    if (!userData) {
+      return {
+        isValid: false,
+        message: "User data not found.",
+      };
     }
   } catch (err) {
     console.error(err);
@@ -841,22 +840,22 @@ const verifyPaternityLeave = async (user, fromDate, toDate) => {
     };
   }
 
+  const paternityLeavesTaken = userData.paternityLeave || 0;
   const totalPaternityLeaveLimit = 20;
   const remainingPaternityLeaves =
     totalPaternityLeaveLimit - paternityLeavesTaken;
 
-  if (paternityLeavesTaken + diffDaysCount > totalPaternityLeaveLimit) {
+  if (paternityLeavesTaken + diffDays > totalPaternityLeaveLimit) {
     return {
       isValid: false,
       message: `You have exceeded your paternity leave limit of ${totalPaternityLeaveLimit} days. You have ${remainingPaternityLeaves} days remaining. Please contact HR for additional support.`,
     };
   }
 
-  if (diffDaysCount > 10) {
+  if (diffDays > 10) {
     return {
       isValid: false,
-      message:
-        "Paternity leave can be taken in increments, with a maximum of 10 working days at one stretch.",
+      message: "Paternity leave cannot exceed 10 days at a stretch.",
     };
   }
 
@@ -865,7 +864,7 @@ const verifyPaternityLeave = async (user, fromDate, toDate) => {
   if (startDate < fourWeeksFromNow) {
     return {
       isValid: false,
-      message: "Please submit a request for leave at least 4 weeks in advance.",
+      message: "Leave must be applied for at least 4 weeks in advance.",
     };
   }
 

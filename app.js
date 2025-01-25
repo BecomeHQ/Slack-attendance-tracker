@@ -26,6 +26,7 @@ const {
   handleWorkFromHomeSubmission,
   handleBereavementLeaveSubmission,
   handleMaternityLeaveSubmission,
+  handlePaternityLeaveSubmission,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -76,6 +77,8 @@ app.view("mensural_leave_application_modal", handleMensuralLeaveSubmission);
 app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
 
 app.view("maternity_leave_application_modal", handleMaternityLeaveSubmission);
+
+app.view("paternity_leave_application_modal", handlePaternityLeaveSubmission);
 
 app.view(
   "bereavement_leave_application_modal",
