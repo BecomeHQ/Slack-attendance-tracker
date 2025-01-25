@@ -2350,6 +2350,70 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
       },
     });
+  } else if (action.action_id === "select_internship_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "internship_holiday_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Restricted Holiday", // Shortened title
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 1",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 2",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
   }
 };
 
@@ -4176,6 +4240,122 @@ const handleRestrictedHolidaySubmission = async ({
   }
 };
 
+const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
+  await ack();
+
+  const user = body.user.id;
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2?.date_select_2?.selected_date,
+  ].filter(Boolean);
+
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  if (selectedDates.length > 2) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: You cannot apply for more than 2 days of leave.`,
+    });
+    return;
+  }
+
+  for (const date of selectedDates) {
+    const selectedDate = new Date(date);
+    if (selectedDate < new Date()) {
+      await client.chat.postMessage({
+        channel: user,
+        text: `:x: One of the selected dates is in the past. Please select a valid date.`,
+      });
+      return;
+    }
+    if (isWeekendOrPublicHoliday(selectedDate)) {
+      await client.chat.postMessage({
+        channel: user,
+        text: `:x: One of the selected dates falls on a weekend or public holiday. Please select a valid date.`,
+      });
+      return;
+    }
+  }
+
+  const overlappingLeaves = await Leave.find({
+    user,
+    status: { $ne: "Rejected" },
+    dates: { $in: selectedDates.map((date) => new Date(date)) },
+  });
+
+  if (overlappingLeaves.length > 0) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There are overlapping leaves with the selected dates. Please select different dates.`,
+    });
+    return;
+  }
+
+  try {
+    const leave = new Leave({
+      user,
+      reason,
+      dates: selectedDates.map((date) => new Date(date)),
+      status: "Pending",
+      leaveType: "Internship_Leave",
+      leaveDay: "Full_Day",
+      leaveTime: "Full_Day",
+    });
+    await leave.save();
+
+    const leaveDetails = `*Reason:* ${reason}\n*Dates:* ${selectedDates
+      .map((date) => formatDate(date))
+      .join(", ")}`;
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error submitting internship leave:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your internship leave request. Please try again later.`,
+    });
+  }
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -4203,4 +4383,5 @@ module.exports = {
   handleMaternityLeaveSubmission,
   handlePaternityLeaveSubmission,
   handleRestrictedHolidaySubmission,
+  handleInternshipLeaveSubmission,
 };

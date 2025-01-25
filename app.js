@@ -15,6 +15,7 @@ const {
   upcomingLeaves,
   verifyInternshipLeave,
   openLeaveTypeModal,
+  handleInternshipLeaveSubmission,
   handleLeaveTypeSelection,
   handleSickLeaveSubmission,
   handleAddMoreDays,
@@ -118,6 +119,10 @@ app.action("date_select", handleDateSelectionSubmission);
 
 app.view("work_from_home_application_modal", handleWorkFromHomeSubmission);
 
+app.view(
+  "internship_holiday_application_modal",
+  handleInternshipLeaveSubmission
+);
 (async () => {
   await app.start(process.env.PORT || 1000);
   console.log("⚡️ Slack Bolt app is running!");
