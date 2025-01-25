@@ -273,6 +273,14 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 },
                 action_id: "select_paternity_leave",
               },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Restricted Leave",
+                },
+                action_id: "select_restricted_leave",
+              },
             ],
           },
         ],
@@ -2159,6 +2167,138 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
     } catch (error) {
       console.error("Failed to open paternity leave modal:", error);
     }
+  } else if (action.action_id === "select_restricted_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "restricted_holiday_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Restricted Holiday", // Shortened title
+        },
+        blocks: [
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 1",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 2",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_3",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 3",
+              },
+              action_id: "date_select_3",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 3",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_4",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 4",
+              },
+              action_id: "date_select_4",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 4",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_5",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 5",
+              },
+              action_id: "date_select_5",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 5",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "dates_6",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 6",
+              },
+              action_id: "date_select_6",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 6",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
   }
 };
 
@@ -2738,7 +2878,7 @@ const approveLeave = async ({ ack, body, client, action }) => {
     } else if (leaveRequest.leaveType === "Bereavement_Leave") {
       approvalMessage = `🕊️ Your bereavement leave for ${formatDate(
         leaveRequest.fromDate
-      )} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we’re here if you need any support.`;
+      )} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.`;
       user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
       remainingLeaveBalance = 5 - user.bereavementLeave;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
@@ -2746,7 +2886,7 @@ const approveLeave = async ({ ack, body, client, action }) => {
       remainingLeaveBalance = 6 - user.restrictedHoliday;
       approvalMessage = `🌴 Your leave for ${formatDate(
         leaveRequest.fromDate
-      )} is approved! Hope you make the most of your break. Take this time to relax and recharge!`;
+      )} is approved! You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!`;
     } else if (leaveRequest.leaveType === "Mensural_Leave") {
       console.log("Mensural Leave");
 
@@ -3853,6 +3993,111 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
+const handleRestrictedHolidaySubmission = async ({
+  ack,
+  body,
+  view,
+  client,
+}) => {
+  await ack();
+
+  const user = body.user.id;
+
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_3.date_select_3.selected_date,
+    view.state.values.dates_4.date_select_4.selected_date,
+    view.state.values.dates_5.date_select_5.selected_date,
+    view.state.values.dates_6.date_select_6.selected_date,
+  ].filter(Boolean);
+
+  console.log("Selected Dates:", selectedDates);
+
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  const verificationResult = await verifyRestrictedHoliday(user, selectedDates);
+
+  if (!verificationResult.isValid) {
+    await client.chat.postMessage({
+      channel: user,
+      text: `Failed to submit restricted holiday request: ${verificationResult.message}. Please check the dates and try again.`,
+    });
+    return;
+  }
+
+  const leaveDetails = selectedDates
+    .map((date) => {
+      const fromDate = new Date(date).toISOString().split("T")[0];
+      return `*Date:* ${fromDate}\n*Type:* Full Day`;
+    })
+    .join("\n\n");
+
+  try {
+    const leave = new Leave({
+      user,
+      dates: selectedDates,
+      reason,
+      leaveType: "Restricted_Holiday",
+      leaveDay: Array(selectedDates.length).fill("Full_Day"),
+      leaveTime: Array(selectedDates.length).fill("Full_Day"),
+    });
+    await leave.save();
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your restricted holiday request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error submitting restricted holiday:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your restricted holiday request. Please try again later.`,
+    });
+  }
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -3879,4 +4124,5 @@ module.exports = {
   handleBereavementLeaveSubmission,
   handleMaternityLeaveSubmission,
   handlePaternityLeaveSubmission,
+  handleRestrictedHolidaySubmission,
 };

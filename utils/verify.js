@@ -1053,25 +1053,15 @@ const verifyPersonalLeave = async (user, fromDate, toDate) => {
   };
 };
 
-const verifyRestrictedHoliday = async (user, fromDate, toDate) => {
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
+const verifyRestrictedHoliday = async (user, selectedDates) => {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
+    return {
+      isValid: false,
+      message: "No dates provided for restricted holiday.",
+    };
+  }
+
   const currentDate = new Date();
-
-  if (!startDate || !endDate) {
-    return {
-      isValid: false,
-      message: "Please provide valid start and end dates",
-    };
-  }
-
-  if (startDate > endDate) {
-    return {
-      isValid: false,
-      message: "Start date cannot be after end date",
-    };
-  }
-
   const currentMonth = currentDate.getMonth();
   const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
   const isFirstWeek = currentDate.getDate() <= 7;
@@ -1084,12 +1074,49 @@ const verifyRestrictedHoliday = async (user, fromDate, toDate) => {
     };
   }
 
-  let diffDays = 0;
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    if (!isWeekendOrPublicHoliday(d)) {
-      diffDays++;
+  const quarterStartDate = new Date(currentDate.getFullYear(), currentMonth, 1);
+  const quarterEndDate = new Date(
+    currentDate.getFullYear(),
+    currentMonth + 3,
+    0
+  );
+
+  for (const date of selectedDates) {
+    const selectedDate = new Date(date);
+    if (selectedDate < quarterStartDate || selectedDate > quarterEndDate) {
+      return {
+        isValid: false,
+        message: "Selected dates must be within the current quarter.",
+      };
+    }
+
+    if (isWeekendOrPublicHoliday(selectedDate)) {
+      return {
+        isValid: false,
+        message: `The date ${
+          selectedDate.toISOString().split("T")[0]
+        } is a weekend or a public holiday. Please select a different date.`,
+      };
     }
   }
+
+  const formattedDates = selectedDates.map((date) => new Date(date));
+
+  const overlappingLeave = await Leave.findOne({
+    user: user,
+    dates: { $in: formattedDates },
+    status: "Approved",
+  });
+  if (overlappingLeave) {
+    return {
+      isValid: false,
+      message: `There is already an approved leave on ${
+        overlappingLeave.dates[0].toISOString().split("T")[0]
+      }. Please select a different date.`,
+    };
+  }
+
+  let diffDays = selectedDates.length;
 
   const userRecord = await User.findOne({ slackId: user });
   const restrictedHolidaysTaken = userRecord ? userRecord.restrictedHoliday : 0;

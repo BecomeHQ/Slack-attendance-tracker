@@ -27,6 +27,7 @@ const {
   handleBereavementLeaveSubmission,
   handleMaternityLeaveSubmission,
   handlePaternityLeaveSubmission,
+  handleRestrictedHolidaySubmission,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -85,6 +86,11 @@ app.view(
   handleBereavementLeaveSubmission
 );
 
+app.view(
+  "restricted_holiday_application_modal",
+  handleRestrictedHolidaySubmission
+);
+
 app.command("/manage-leaves", manageLeaves);
 
 app.action(/approve_leave_(.*)/, approveLeave);
@@ -104,6 +110,7 @@ app.command("/upcoming-holidays", showUpcomingHolidays);
 app.command("/upcoming-leaves", upcomingLeaves);
 
 app.action(/select_(.*)_leave/, handleLeaveTypeSelection);
+app.action("select_restricted_leave", handleLeaveTypeSelection);
 
 app.action("add_more_days_button", handleAddMoreDays);
 
