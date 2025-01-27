@@ -166,6 +166,48 @@ const applyLeave = async ({ command, ack, client, body }) => {
 const openLeaveTypeModal = async ({ ack, body, client }) => {
   await ack();
   try {
+    const userId = body.user_id;
+    const user = await User.findOne({ slackId: userId });
+
+    if (!user) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: "User not found. Please ensure your Slack ID is registered.",
+      });
+      return;
+    }
+
+    const totalLeaves = {
+      sickLeave: 12,
+      casualLeave: 6,
+      burnout: 6,
+      mensuralLeaves: 18,
+      unpaidLeave: 20,
+      internshipLeave: 10,
+      wfhLeave: 10,
+      bereavementLeave: 5,
+      maternityLeave: 13,
+      paternityLeave: 20,
+      restrictedHoliday: 6,
+    };
+
+    const leaveBalances = {
+      sickLeave: totalLeaves.sickLeave - (user.sickLeave || 0),
+      casualLeave: totalLeaves.casualLeave - (user.casualLeave || 0),
+      burnout: totalLeaves.burnout - (user.burnout || 0),
+      mensuralLeaves: totalLeaves.mensuralLeaves - (user.mensuralLeaves || 0),
+      unpaidLeave: totalLeaves.unpaidLeave - (user.unpaidLeave || 0),
+      internshipLeave:
+        totalLeaves.internshipLeave - (user.internshipLeave || 0),
+      wfhLeave: totalLeaves.wfhLeave - (user.wfhLeave || 0),
+      bereavementLeave:
+        totalLeaves.bereavementLeave - (user.bereavementLeave || 0),
+      maternityLeave: totalLeaves.maternityLeave - (user.maternityLeave || 0),
+      paternityLeave: totalLeaves.paternityLeave - (user.paternityLeave || 0),
+      restrictedHoliday:
+        totalLeaves.restrictedHoliday - (user.restrictedHoliday || 0),
+    };
+
     await client.views.open({
       trigger_id: body.trigger_id,
       view: {
@@ -190,7 +232,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Sick Leave",
+                  text: `Sick Leave (${leaveBalances.sickLeave})`,
                 },
                 value: "sick_leave",
                 action_id: "select_sick_leave",
@@ -199,7 +241,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Casual Leave",
+                  text: `Casual Leave (${leaveBalances.casualLeave})`,
                 },
                 value: "casual_leave",
                 action_id: "select_casual_leave",
@@ -208,7 +250,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Burnout Leave",
+                  text: `Burnout Leave (${leaveBalances.burnout})`,
                 },
                 value: "burnout_leave",
                 action_id: "select_burnout_leave",
@@ -217,7 +259,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Mensural Leave",
+                  text: `Mensural Leave (${leaveBalances.mensuralLeaves})`,
                 },
                 value: "mensural_leave",
                 action_id: "select_mensural_leave",
@@ -226,7 +268,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Unpaid Leave",
+                  text: `Unpaid Leave (${leaveBalances.unpaidLeave})`,
                 },
                 value: "unpaid_leave",
                 action_id: "select_unpaid_leave",
@@ -235,7 +277,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Internship Leave",
+                  text: `Internship Leave (${leaveBalances.internshipLeave})`,
                 },
                 value: "internship_leave",
                 action_id: "select_internship_leave",
@@ -244,7 +286,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Work-from-Home Leave",
+                  text: `Work-from-Home Leave (${leaveBalances.wfhLeave})`,
                 },
                 value: "workfrom_home_leave",
                 action_id: "select_workhome_leave",
@@ -253,7 +295,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Bereavement Leave",
+                  text: `Bereavement Leave (${leaveBalances.bereavementLeave})`,
                 },
                 action_id: "select_bereavement_leave",
               },
@@ -261,7 +303,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Maternity Leave",
+                  text: `Maternity Leave (${leaveBalances.maternityLeave})`,
                 },
                 action_id: "select_maternity_leave",
               },
@@ -269,7 +311,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Paternity Leave",
+                  text: `Paternity Leave (${leaveBalances.paternityLeave})`,
                 },
                 action_id: "select_paternity_leave",
               },
@@ -277,7 +319,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: "Restricted Leave",
+                  text: `Restricted Leave (${leaveBalances.restrictedHoliday})`,
                 },
                 action_id: "select_restricted_leave",
               },
