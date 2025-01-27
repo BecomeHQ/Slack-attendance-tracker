@@ -870,6 +870,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
         blocks: [
           {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Sick Leaves:* Can avail immediately. For leaves exceeding 3 days, a medical certificate is required.",
+              },
+            ],
+          },
+          {
             type: "input",
             block_id: "dates_1",
             element: {
@@ -905,32 +914,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -943,13 +926,12 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_1",
+              action_id: "leave_type_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
-            optional: true,
           },
           {
             type: "input",
@@ -988,32 +970,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_2",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1026,11 +982,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_2",
+              action_id: "leave_type_select_2",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1071,32 +1027,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1109,11 +1039,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_3",
+              action_id: "leave_type_select_3",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1149,6 +1079,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
         blocks: [
           {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Casual Leaves:* 1.5 days will be restored every month.",
+              },
+            ],
+          },
+          {
             type: "input",
             block_id: "dates_1",
             element: {
@@ -1184,32 +1123,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1222,11 +1135,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_1",
+              action_id: "leave_type_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1267,32 +1180,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_2",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1305,11 +1192,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_2",
+              action_id: "leave_type_select_2",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1350,32 +1237,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1388,11 +1249,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_3",
+              action_id: "leave_type_select_3",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1427,6 +1288,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           text: "Apply for Burnout Leave",
         },
         blocks: [
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Burnout Leave:* Can avail immediately. Rest and recover soon.",
+              },
+            ],
+          },
           {
             type: "input",
             block_id: "dates_1",
@@ -1492,6 +1362,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
         blocks: [
           {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Menstrual Leave:* Supportive leave policy for menstrual health.",
+              },
+            ],
+          },
+          {
             type: "input",
             block_id: "dates_1",
             element: {
@@ -1527,32 +1406,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Leave Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1565,13 +1418,12 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_1",
+              action_id: "leave_type_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Leave Type",
             },
-            optional: true,
           },
           {
             type: "input",
@@ -1610,32 +1462,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Leave Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_2",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1648,11 +1474,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_2",
+              action_id: "leave_type_select_2",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Leave Type",
             },
             optional: true,
           },
@@ -1688,6 +1514,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
         blocks: [
           {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Unpaid Leave:* Includes Sabbatical and Marriage Leave. Taken when no other leave balance is available.",
+              },
+            ],
+          },
+          {
             type: "input",
             block_id: "dates_1",
             element: {
@@ -1723,32 +1558,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_1",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_1",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1761,11 +1570,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_1",
+              action_id: "leave_type_select_1",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1806,32 +1615,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_2",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_2",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1844,11 +1627,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_2",
+              action_id: "leave_type_select_2",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1889,32 +1672,6 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                 {
                   text: {
                     type: "plain_text",
-                    text: "Half Day",
-                  },
-                  value: "Half_Day",
-                },
-              ],
-              action_id: "leave_type_select_3",
-            },
-            label: {
-              type: "plain_text",
-              text: "Type",
-            },
-            optional: true,
-          },
-          {
-            type: "input",
-            block_id: "half_day_3",
-            element: {
-              type: "static_select",
-              placeholder: {
-                type: "plain_text",
-                text: "Select half",
-              },
-              options: [
-                {
-                  text: {
-                    type: "plain_text",
                     text: "First Half",
                   },
                   value: "First_Half",
@@ -1927,11 +1684,11 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
                   value: "Second_Half",
                 },
               ],
-              action_id: "half_day_select_3",
+              action_id: "leave_type_select_3",
             },
             label: {
               type: "plain_text",
-              text: "Half Day",
+              text: "Type",
             },
             optional: true,
           },
@@ -1963,9 +1720,18 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         callback_id: "work_from_home_application_modal",
         title: {
           type: "plain_text",
-          text: "Apply for Unpaid Leave",
+          text: "Apply for Work From Home Leave",
         },
         blocks: [
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*WFH Leave:* Ensure WFH days are marked for the entire month by the 3rd working day.",
+              },
+            ],
+          },
           {
             type: "input",
             block_id: "date",
@@ -2066,6 +1832,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           blocks: [
             {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: "*Bereavement Leave:* Unfortunate to see you here. Praying for more strength during difficult times.",
+                },
+              ],
+            },
+            {
               type: "input",
               block_id: "start_date",
               element: {
@@ -2135,6 +1910,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
             text: "Maternity Leave",
           },
           blocks: [
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: "*Maternity Leave:* Extended leave for mothers during and after pregnancy.",
+                },
+              ],
+            },
             {
               type: "input",
               block_id: "start_date",
@@ -2206,6 +1990,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           blocks: [
             {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: "*Paternity Leave:* Leave granted to fathers for post-birth bonding and support.",
+                },
+              ],
+            },
+            {
               type: "input",
               block_id: "start_date",
               element: {
@@ -2274,6 +2067,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           text: "Restricted Holiday", // Shortened title
         },
         blocks: [
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Restricted Holidays:* Apply RH along with any important dates like birthdays, anniversaries, etc.",
+              },
+            ],
+          },
           {
             type: "input",
             block_id: "dates_1",
@@ -2403,9 +2205,18 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         callback_id: "internship_holiday_application_modal",
         title: {
           type: "plain_text",
-          text: "Restricted Holiday", // Shortened title
+          text: "Internship Leave", // Shortened title
         },
         blocks: [
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Internship Leave:* Leave specific for internships or related commitments.",
+              },
+            ],
+          },
           {
             type: "input",
             block_id: "dates_1",
@@ -3175,29 +2986,11 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     view.state.values.dates_3.date_select_3.selected_date,
   ].filter(Boolean);
 
-  console.log("Selected Dates:", selectedDates);
-
   const leaveTypes = [
     view.state.values.leave_type_1.leave_type_select_1.selected_option?.value,
     view.state.values.leave_type_2.leave_type_select_2.selected_option?.value,
     view.state.values.leave_type_3.leave_type_select_3.selected_option?.value,
   ].filter(Boolean);
-
-  console.log("Leave Types:", leaveTypes);
-
-  const halfDays = leaveTypes.map((type, index) => {
-    if (type === "Full_Day") {
-      return "Full_Day";
-    } else {
-      return (
-        view.state.values[`half_day_${index + 1}`][
-          `half_day_select_${index + 1}`
-        ].selected_option?.value || "N/A"
-      );
-    }
-  });
-
-  console.log("Half Days:", halfDays);
 
   if (selectedDates.length === 0) {
     console.error("No valid dates selected.");
@@ -3215,7 +3008,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     user,
     selectedDates,
     leaveTypes,
-    halfDays,
+    leaveTypes, // leaveTime set same as leaveDay
     reason
   );
 
@@ -3235,8 +3028,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
         year: "numeric",
       });
       const leaveType = leaveTypes[index];
-      const halfDay = halfDays[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
+      return `*Date:* ${fromDate}\n*Type:* ${leaveType}`;
     })
     .join("\n\n");
 
@@ -3247,7 +3039,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
       reason,
       leaveType: "Sick_Leave",
       leaveDay: leaveTypes,
-      leaveTime: halfDays,
+      leaveTime: leaveTypes, // leaveTime set same as leaveDay
     });
     await leave.save();
 
@@ -3326,30 +3118,14 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
     view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_3.date_select_3.selected_date,
   ].filter(Boolean);
-
-  console.log("Selected Dates:", selectedDates);
 
   const leaveTypes = [
     view.state.values.leave_type_1.leave_type_select_1.selected_option?.value,
     view.state.values.leave_type_2.leave_type_select_2.selected_option?.value,
+    view.state.values.leave_type_3.leave_type_select_3.selected_option?.value,
   ].filter(Boolean);
-
-  console.log("Leave Types:", leaveTypes);
-
-  const halfDays = leaveTypes.map((type, index) => {
-    if (type === "Full_Day") {
-      return "Full_Day";
-    } else {
-      return (
-        view.state.values[`half_day_${index + 1}`][
-          `half_day_select_${index + 1}`
-        ].selected_option?.value || "N/A"
-      );
-    }
-  });
-
-  console.log("Half Days:", halfDays);
 
   if (selectedDates.length === 0) {
     console.error("No valid dates selected.");
@@ -3367,7 +3143,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     user,
     selectedDates,
     leaveTypes,
-    halfDays,
+    leaveTypes,
     reason
   );
 
@@ -3387,8 +3163,8 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
         year: "numeric",
       });
       const leaveType = leaveTypes[index];
-      const halfDay = halfDays[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
+      const halfDay = leaveTypes[index];
+      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${leaveTypes}`;
     })
     .join("\n\n");
 
@@ -3399,7 +3175,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
       reason,
       leaveType: "Casual_Leave",
       leaveDay: leaveTypes,
-      leaveTime: halfDays,
+      leaveTime: leaveTypes,
     });
     await leave.save();
 
@@ -3411,13 +3187,13 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `New leave request received!`,
+      text: `New Casual Leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received from @${userName}!\n\n${leaveDetails}`,
+            text: `:bell: New Casual Leave request received from *${userName}*!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3476,20 +3252,6 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
 
   console.log("Leave Types:", leaveTypes);
 
-  const halfDays = leaveTypes.map((type, index) => {
-    if (type === "Full_Day") {
-      return "Full_Day";
-    } else {
-      return (
-        view.state.values[`half_day_${index + 1}`][
-          `half_day_select_${index + 1}`
-        ].selected_option?.value || "N/A"
-      );
-    }
-  });
-
-  console.log("Half Days:", halfDays);
-
   if (selectedDates.length === 0) {
     console.error("No valid dates selected.");
     await client.chat.postMessage({
@@ -3506,7 +3268,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     user,
     selectedDates,
     leaveTypes,
-    halfDays,
+    leaveTypes,
     reason
   );
 
@@ -3526,7 +3288,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
         year: "numeric",
       });
       const leaveType = leaveTypes[index];
-      const halfDay = halfDays[index];
+      const halfDay = leaveTypes[index];
       return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
     })
     .join("\n\n");
@@ -3538,7 +3300,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
       reason,
       leaveType: "Mensural_Leave",
       leaveDay: leaveTypes,
-      leaveTime: halfDays,
+      leaveTime: leaveTypes,
     });
     await leave.save();
 
@@ -3559,7 +3321,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `New leave request received!`,
+      text: `New mensural leave request received!`,
       blocks: [
         {
           type: "section",
@@ -3626,20 +3388,6 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
 
   console.log("Leave Types:", leaveTypes);
 
-  const halfDays = leaveTypes.map((type, index) => {
-    if (type === "Full_Day") {
-      return "Full_Day";
-    } else {
-      return (
-        view.state.values[`half_day_${index + 1}`][
-          `half_day_select_${index + 1}`
-        ].selected_option?.value || "N/A"
-      );
-    }
-  });
-
-  console.log("Half Days:", halfDays);
-
   const reason =
     view.state.values.reason.reason_input.value || "No reason provided";
 
@@ -3647,7 +3395,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
     user,
     selectedDates,
     leaveTypes,
-    halfDays,
+    leaveTypes,
     reason
   );
 
@@ -3680,7 +3428,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
       reason,
       leaveType: "Unpaid_Leave",
       leaveDay: leaveTypes,
-      leaveTime: halfDays,
+      leaveTime: leaveTypes,
     });
     await leave.save();
 
