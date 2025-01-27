@@ -2978,15 +2978,17 @@ const approveLeave = async ({ ack, body, client, action }) => {
     if (leaveRequest.leaveType === "Sick_Leave") {
       user.sickLeave = (user.sickLeave || 0) + leaveDays;
       remainingLeaveBalance = 12 - user.sickLeave;
-      approvalMessage = `🤒 Your sick leave for ${formatDate(
+      approvalMessage = `🤒 *Your sick leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!\n\n${leaveDetails}\n\n*Remaining Sick Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!\n\n${leaveDetails}\n\n*Remaining Sick Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Burnout_Leave") {
       user.burnout = (user.burnout || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.burnout;
-      approvalMessage = `🧠 Your burnout leave for ${formatDate(
+      approvalMessage = `🧠 *Your burnout leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!\n\n${leaveDetails}\n\n*Remaining Burnout Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Your well-being matters. Take this time to rest and reflect. It might help to chat with your lead about finding more sustainable ways to work. Take care!\n\n${leaveDetails}\n\n*Remaining Burnout Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Paternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);
@@ -3003,36 +3005,41 @@ const approveLeave = async ({ ack, body, client, action }) => {
       console.log(diffDays);
       user.paternityLeave = (user.paternityLeave || 0) + diffDays;
       remainingLeaveBalance = 20 - user.paternityLeave;
-      approvalMessage = `🍼 Your paternity leave starting ${formatDate(
+      approvalMessage = `🍼 *Your paternity leave starting ${formatDate(
         leaveRequest.dates[0]
-      )} is approved! Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.\n\n${leaveDetails}\n\n*Remaining Paternity Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.\n\n${leaveDetails}\n\n*Remaining Paternity Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Casual_Leave") {
       user.casualLeave = (user.casualLeave || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.casualLeave;
-      approvalMessage = `🌼 Your casual leave for ${formatDate(
+      approvalMessage = `🌼 *Your casual leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved! Wishing you a peaceful and refreshing break. Enjoy your time off!\n\n${leaveDetails}\n\n*Remaining Casual Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Wishing you a peaceful and refreshing break. Enjoy your time off!\n\n${leaveDetails}\n\n*Remaining Casual Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Bereavement_Leave") {
-      approvalMessage = `🕊️ Your bereavement leave for ${formatDate(
+      approvalMessage = `🕊️ *Your bereavement leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.\n\n${leaveDetails}`;
+      )} is approved*
+We are deeply sorry for your loss. Our thoughts are with you, and we're here if you need any support.\n\n${leaveDetails}`;
       user.bereavementLeave = (user.bereavementLeave || 0) + leaveDays;
       remainingLeaveBalance = 5 - user.bereavementLeave;
-      approvalMessage += `\n\n*Remaining Bereavement Leave Balance:* ${remainingLeaveBalance} days`;
+      approvalMessage += `\n\n*Remaining Bereavement Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
       user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
       remainingLeaveBalance = 6 - user.restrictedHoliday;
-      approvalMessage = `🌴 Your leave for ${formatDate(
+      approvalMessage = `🌴 *Your leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved! You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!\n\n${leaveDetails}\n\n*Remaining Restricted Holiday Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!\n\n${leaveDetails}\n\n*Remaining Restricted Holiday Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Mensural_Leave") {
       console.log("Mensural Leave");
 
       user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
       remainingLeaveBalance = 18 - user.mensuralLeaves;
-      approvalMessage = `💗 Your menstrual leave for ${formatDate(
+      approvalMessage = `💗 *Your menstrual leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. Rest well and take care. Let us know if you need any support.\n\n${leaveDetails}\n\n*Remaining Mensural Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Rest well and take care. Let us know if you need any support.\n\n${leaveDetails}\n\n*Remaining Mensural Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);
@@ -3049,26 +3056,30 @@ const approveLeave = async ({ ack, body, client, action }) => {
       console.log(diffDays);
       user.maternityLeave = (user.maternityLeave || 0) + diffDays;
       remainingLeaveBalance = 65 - user.maternityLeave;
-      approvalMessage = `👶 Your maternity leave starting ${formatDate(
+      approvalMessage = `👶 *Your maternity leave starting ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. Wishing you a joyful and safe journey into motherhood. We can't wait to meet your little one someday!\n\n${leaveDetails}\n\n*Remaining Maternity Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Wishing you a joyful and safe journey into motherhood. We can't wait to meet your little one someday!\n\n${leaveDetails}\n\n*Remaining Maternity Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Unpaid_Leave") {
       user.unpaidLeave = (user.unpaidLeave || 0) + leaveDays;
       remainingLeaveBalance = 20 - user.unpaidLeave;
-      approvalMessage = `📝 Your unpaid leave for ${formatDate(
+      approvalMessage = `📝 *Your unpaid leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.\n\n${leaveDetails}\n\n*Remaining Unpaid Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.\n\n${leaveDetails}\n\n*Remaining Unpaid Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Work_from_Home") {
       user.wfhLeave = (user.wfhLeave || 0) + leaveDays;
       remainingLeaveBalance = 4 - user.wfhLeave;
-      approvalMessage = `🏡 Your WFH day for ${formatDate(
+      approvalMessage = `🏡 *Your WFH day for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved! Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!\n\n${leaveDetails}\n\n*Remaining WFH Leave Balance:* ${remainingLeaveBalance} days`;
+      )} is approved*
+Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!\n\n${leaveDetails}\n\n*Remaining WFH Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Internship_Leave") {
       user.internshipLeave = (user.internshipLeave || 0) + leaveDays;
-      approvalMessage = `📚 Your leave for ${formatDate(
+      approvalMessage = `📚 *Your leave for ${formatDate(
         leaveRequest.dates[0]
-      )} is approved. Take your well-deserved break!\n\n${leaveDetails}`;
+      )} is approved*
+Take your well-deserved break!\n\n${leaveDetails}`;
     }
 
     await user.save();
@@ -3114,6 +3125,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3205,13 +3217,13 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `New leave request received!`,
+      text: `New Sick Leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New Sick Leave request received from *${userName}*!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3267,6 +3279,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3362,7 +3375,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New casual leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3394,6 +3407,10 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     });
   } catch (error) {
     console.error("Error submitting casual leave:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your leave request. Please try again later.`,
+    });
   }
 };
 
@@ -3401,6 +3418,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3505,7 +3523,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New mensural leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3537,6 +3555,10 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     });
   } catch (error) {
     console.error("Error submitting mensural leave:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: There was an error submitting your mensural leave request. Please try again later.`,
+    });
   }
 };
 
@@ -3544,6 +3566,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3633,7 +3656,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New casual leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New unpaid leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3671,6 +3694,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
 const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
   const user = body.user.id;
+  const userName = body.user.username;
   const startDate = view.state.values.dates_1.start_date_select.selected_date;
   const endDate = view.state.values.dates_2.end_date_select.selected_date;
   const reason = view.state.values.reason.reason_input.value;
@@ -3741,7 +3765,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `:bell: New burnout leave request received!\n\n${leaveDetails}`,
+              text: `:bell: New burnout leave request received from @${userName}!\n\n${leaveDetails}`,
             },
           },
           {
@@ -3803,6 +3827,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
 const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
   await ack();
   const user = body.user.id;
+  const userName = body.user.username;
   const selectedDates = [
     view.state.values.date.date_select.selected_date,
     view.state.values.date_2.date_select_2.selected_date,
@@ -3872,7 +3897,7 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New WFH leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New WFH leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3906,7 +3931,7 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
     console.error("Error saving leave to database:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your work from home leave request. Please try again later.`,
+      text: `:x: @${userName}, there was an error submitting your work from home leave request. Please try again later.`,
     });
   }
 };
@@ -3920,6 +3945,7 @@ const handleBereavementLeaveSubmission = async ({
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -3979,7 +4005,7 @@ const handleBereavementLeaveSubmission = async ({
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New bereavement leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New bereavement leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4022,6 +4048,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -4081,7 +4108,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New maternity leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New maternity leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4115,7 +4142,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     console.error("Error saving leave to database:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your Maternity Leave request. Please try again later.`,
+      text: `:x: @${userName}, there was an error submitting your Maternity Leave request. Please try again later.`,
     });
   }
 };
@@ -4124,6 +4151,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -4183,7 +4211,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New paternity leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New paternity leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4217,7 +4245,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     console.error("Error saving leave to database:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your Paternity Leave request. Please try again later.`,
+      text: `:x: @${userName}, there was an error submitting your Paternity Leave request. Please try again later.`,
     });
   }
 };
@@ -4231,6 +4259,7 @@ const handleRestrictedHolidaySubmission = async ({
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -4295,7 +4324,7 @@ const handleRestrictedHolidaySubmission = async ({
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New restricted holiday request received!\n\n${leaveDetails}`,
+            text: `:bell: New restricted holiday request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4329,7 +4358,7 @@ const handleRestrictedHolidaySubmission = async ({
     console.error("Error submitting restricted holiday:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your restricted holiday request. Please try again later.`,
+      text: `:x: @${userName}, there was an error submitting your restricted holiday request. Please try again later.`,
     });
   }
 };
@@ -4338,6 +4367,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
+  const userName = body.user.username;
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
     view.state.values.dates_2?.date_select_2?.selected_date,
@@ -4421,7 +4451,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New internship leave request received!\n\n${leaveDetails}`,
+            text: `:bell: New internship leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -4455,7 +4485,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
     console.error("Error submitting internship leave:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your internship leave request. Please try again later.`,
+      text: `:x: @${userName}, there was an error submitting your internship leave request. Please try again later.`,
     });
   }
 };
