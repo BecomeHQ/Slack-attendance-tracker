@@ -15,6 +15,7 @@ const {
   upcomingLeaves,
   verifyInternshipLeave,
   openLeaveTypeModal,
+  handleCompensatoryLeaveSubmission,
   handleInternshipLeaveSubmission,
   handleLeaveTypeSelection,
   handleSickLeaveSubmission,
@@ -83,6 +84,11 @@ app.view("maternity_leave_application_modal", handleMaternityLeaveSubmission);
 app.view("paternity_leave_application_modal", handlePaternityLeaveSubmission);
 
 app.view(
+  "compensatory_leave_application_modal",
+  handleCompensatoryLeaveSubmission
+);
+
+app.view(
   "bereavement_leave_application_modal",
   handleBereavementLeaveSubmission
 );
@@ -123,6 +129,7 @@ app.view(
   "internship_holiday_application_modal",
   handleInternshipLeaveSubmission
 );
+
 (async () => {
   await app.start(process.env.PORT || 1000);
   console.log("⚡️ Slack Bolt app is running!");

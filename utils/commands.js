@@ -323,6 +323,14 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 },
                 action_id: "select_restricted_leave",
               },
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Compensatory Leave",
+                },
+                action_id: "select_compensatory_leave",
+              },
             ],
           },
         ],
@@ -2270,6 +2278,79 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
       },
     });
+  } else if (action.action_id === "select_compensatory_leave") {
+    await client.views.update({
+      view_id: body.view.id,
+      view: {
+        type: "modal",
+        callback_id: "compensatory_leave_application_modal",
+        title: {
+          type: "plain_text",
+          text: "Compensatory Leave",
+        },
+        blocks: [
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "*Internship Leave:* Leave specific for internships or related commitments.",
+              },
+            ],
+          },
+          {
+            type: "input",
+            block_id: "dates_1",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 1",
+              },
+              action_id: "date_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 1",
+            },
+          },
+          {
+            type: "input",
+            block_id: "dates_2",
+            element: {
+              type: "datepicker",
+              placeholder: {
+                type: "plain_text",
+                text: "Select date 2",
+              },
+              action_id: "date_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Date 2",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "reason",
+            element: {
+              type: "plain_text_input",
+              multiline: true,
+              action_id: "reason_input",
+            },
+            label: {
+              type: "plain_text",
+              text: "Reason",
+            },
+          },
+        ],
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+      },
+    });
   }
 };
 
@@ -2929,6 +3010,12 @@ We understand life can be unpredictable. If you need any assistance or resources
 Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!\n\n${leaveDetails}\n\n*Remaining WFH Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Internship_Leave") {
       user.internshipLeave = (user.internshipLeave || 0) + leaveDays;
+      approvalMessage = `📚 *Your leave for ${formatDate(
+        leaveRequest.dates[0]
+      )} is approved*
+Take your well-deserved break!\n\n${leaveDetails}`;
+    } else if (leaveRequest.leaveType === "Compensatory_Leave") {
+      user.compensatoryLeave = (user.compensatoryLeave || 0) + leaveDays;
       approvalMessage = `📚 *Your leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
@@ -4280,6 +4367,126 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
+const handleCompensatoryLeaveSubmission = async ({
+  ack,
+  body,
+  view,
+  client,
+}) => {
+  await ack();
+
+  const user = body.user.id;
+  const userName = body.user.username;
+
+  const selectedDates = [
+    view.state.values.dates_1.date_select_1.selected_date,
+    view.state.values.dates_2.date_select_2.selected_date,
+  ].filter(Boolean);
+
+  const reason =
+    view.state.values.reason.reason_input.value || "No reason provided";
+
+  if (selectedDates.length === 0) {
+    await client.chat.postMessage({
+      channel: user,
+      text: "No valid dates selected for compensatory leave. Please try again.",
+    });
+    return;
+  }
+
+  // const verificationResult = await verifyCompensatoryLeave(
+  //   user,
+  //   selectedDates,
+  //   reason
+  // );
+
+  // if (!verificationResult.isValid) {
+  //   await client.chat.postMessage({
+  //     channel: user,
+  //     text: `Failed to submit compensatory leave request: ${verificationResult.message}. Please check the dates and try again.`,
+  //   });
+  //   return;
+  // }
+
+  const leaveDetails = `*From Date:* ${new Date(
+    selectedDates[0]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*To Date:* ${new Date(
+    selectedDates[selectedDates.length - 1]
+  ).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })}\n*Reason:* ${reason || "No reason provided"}`;
+
+  try {
+    const leave = new Leave({
+      user,
+      reason,
+      dates: selectedDates.map((date) => new Date(date)),
+      status: "Pending",
+      leaveType: "Compensatory_Leave",
+      leaveDay: "Full_Day",
+      leaveTime: "Full_Day",
+    });
+    await leave.save();
+
+    await client.chat.postMessage({
+      channel: user,
+      text: `:white_check_mark: Your compensatory leave request has been submitted for approval!\n\n${leaveDetails}`,
+    });
+
+    const adminUserId = process.env.ADMIN_USER_ID;
+    await client.chat.postMessage({
+      channel: adminUserId,
+      text: `New compensatory leave request received!`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:bell: New compensatory leave request received from @${userName}!\n\n${leaveDetails}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Approve",
+                emoji: true,
+              },
+              style: "primary",
+              action_id: `approve_leave_${leave._id}`,
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Reject",
+                emoji: true,
+              },
+              style: "danger",
+              action_id: `reject_leave_${leave._id}`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error submitting compensatory leave:", error);
+    await client.chat.postMessage({
+      channel: user,
+      text: `:x: @${userName}, there was an error submitting your compensatory leave request. Please try again later.`,
+    });
+  }
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -4308,4 +4515,5 @@ module.exports = {
   handlePaternityLeaveSubmission,
   handleRestrictedHolidaySubmission,
   handleInternshipLeaveSubmission,
+  handleCompensatoryLeaveSubmission,
 };
