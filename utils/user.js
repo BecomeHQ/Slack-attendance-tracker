@@ -22,6 +22,8 @@ const validNames = [
   "sid",
   "sree",
   "gokul",
+  "prity",
+  "reelakshmi"
 ];
 
 module.exports = validNames;
