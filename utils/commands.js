@@ -3107,17 +3107,19 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     return;
   }
 
-  const leaveDetails = selectedDates
-    .map((date, index) => {
-      const fromDate = new Date(date).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      const leaveType = leaveTypes[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}`;
-    })
-    .join("\n\n");
+  const leaveDetails =
+    `*Leave Type:* Sick_Leave\n` +
+    selectedDates
+      .map((date, index) => {
+        const fromDate = new Date(date).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        const leaveType = leaveTypes[index];
+        return `*Date:* ${fromDate}\n*Type:* ${leaveType}`;
+      })
+      .join("\n\n");
 
   try {
     const leave = new Leave({
@@ -3242,18 +3244,19 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     return;
   }
 
-  const leaveDetails = selectedDates
-    .map((date, index) => {
-      const fromDate = new Date(date).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      const leaveType = leaveTypes[index];
-      const halfDay = leaveTypes[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${leaveTypes}`;
-    })
-    .join("\n\n");
+  const leaveDetails =
+    `*Leave Type:* Casual_Leave\n` +
+    selectedDates
+      .map((date, index) => {
+        const fromDate = new Date(date).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        const leaveType = leaveTypes[index];
+        return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${leaveType}`;
+      })
+      .join("\n\n");
 
   try {
     const leave = new Leave({
@@ -3366,19 +3369,20 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     return;
   }
-
-  const leaveDetails = selectedDates
-    .map((date, index) => {
-      const fromDate = new Date(date).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      const leaveType = leaveTypes[index];
-      const halfDay = leaveTypes[index];
-      return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
-    })
-    .join("\n\n");
+  const leaveDetails =
+    `*Leave Type:* Mensural_Leave\n` +
+    selectedDates
+      .map((date, index) => {
+        const fromDate = new Date(date).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        const leaveType = leaveTypes[index];
+        const halfDay = leaveTypes[index];
+        return `*Date:* ${fromDate}\n*Type:* ${leaveType}\n*Half Day:* ${halfDay}`;
+      })
+      .join("\n\n");
 
   try {
     const leave = new Leave({
@@ -3494,7 +3498,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
     return;
   }
 
-  const leaveDetails = `*From Date:* ${new Date(
+  const leaveDetails = `*Leave Type:* Unpaid_Leave\n*From Date:* ${new Date(
     selectedDates[0]
   ).toLocaleDateString("en-US", {
     day: "numeric",
@@ -3603,7 +3607,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       return;
     }
 
-    const leaveDetails = `*From Date:* ${new Date(
+    const leaveDetails = `*Leave Type:* Burnout_Leave\n*From Date:* ${new Date(
       selectedDates[0]
     ).toLocaleDateString("en-US", {
       day: "numeric",
@@ -3749,16 +3753,18 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
     });
     await leave.save();
 
-    const leaveDetails = selectedDates
-      .map((date) => {
-        const formattedDate = new Date(date).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
-        return `*Date:* ${formattedDate}\n*Type:* Full_Day\n*Half Day:* Full_Day`;
-      })
-      .join("\n\n");
+    const leaveDetails =
+      `*Leave Type:* Work_from_Home\n` +
+      selectedDates
+        .map((date) => {
+          const formattedDate = new Date(date).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+          return `*Date:* ${formattedDate}\n*Type:* Full_Day\n*Half Day:* Full_Day`;
+        })
+        .join("\n\n");
 
     await client.chat.postMessage({
       channel: user,
@@ -3855,14 +3861,13 @@ const handleBereavementLeaveSubmission = async ({
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
-      "en-US",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+    const leaveDetails = `*Leave Type:* Bereavement_Leave\n*From Date:* ${new Date(
+      startDate
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -3958,14 +3963,13 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
-      "en-US",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+    const leaveDetails = `*Leave Type:* Maternity_Leave\n*From Date:* ${new Date(
+      startDate
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -4061,14 +4065,13 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
     await leave.save();
 
-    const leaveDetails = `*From Date:* ${new Date(startDate).toLocaleDateString(
-      "en-US",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    )}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
+    const leaveDetails = `*Leave Type:* Paternity_Leave\n*From Date:* ${new Date(
+      startDate
+    ).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })}\n*To Date:* ${new Date(endDate).toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -4162,7 +4165,7 @@ const handleRestrictedHolidaySubmission = async ({
     return;
   }
 
-  const leaveDetails = `*From Date:* ${new Date(
+  const leaveDetails = `*Leave Type:* Restricted_Holiday\n*From Date:* ${new Date(
     selectedDates[0]
   ).toLocaleDateString("en-US", {
     day: "numeric",
@@ -4304,8 +4307,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
       leaveTime: "Full_Day",
     });
     await leave.save();
-
-    const leaveDetails = `*From Date:* ${new Date(
+    const leaveDetails = `*Leave Type:* Internship_Leave\n*From Date:* ${new Date(
       selectedDates[0]
     ).toLocaleDateString("en-US", {
       day: "numeric",
@@ -4408,7 +4410,7 @@ const handleCompensatoryLeaveSubmission = async ({
   //   return;
   // }
 
-  const leaveDetails = `*From Date:* ${new Date(
+  const leaveDetails = `*Leave Type:* Compensatory_Leave\n*From Date:* ${new Date(
     selectedDates[0]
   ).toLocaleDateString("en-US", {
     day: "numeric",
