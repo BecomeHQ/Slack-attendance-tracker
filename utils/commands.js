@@ -2564,7 +2564,7 @@ const checkOut = async ({ ack, body, client }) => {
 
   const userId = body.user_id;
   const now = new Date();
-  const time = now.toTimeString().split(" ")[0]; // Get time in hr:min:seconds format (24 hr format)
+  const time = now.toTimeString().split(" ")[0]; // Format: HH:MM:SS
 
   try {
     const attendance = await Attendance.findOne({
@@ -2572,18 +2572,27 @@ const checkOut = async ({ ack, body, client }) => {
       date: now.toISOString().split("T")[0],
     }).sort({ checkinTime: -1 });
 
+    if (!attendance) {
+      console.warn(
+        `No check-in record found for user ${userId} on ${
+          now.toISOString().split("T")[0]
+        }`
+      );
+
+      // Inform the user that they haven't checked in yet
+      await client.chat.postMessage({
+        channel: userId,
+        text: "❗ You have not checked in yet today. Please check in first before checking out.",
+      });
+
+      return; // Stop execution here
+    }
+
     attendance.checkoutTime = time;
     await attendance.save();
 
-    // Send message to the user
-    // await client.chat.postMessage({
-    //   channel: userId,
-    //   text: `You have jibbled out at ${now.toLocaleTimeString()}.`,
-    // });
-
-    // Send message to the attendance channel
     const attendanceChannelId =
-      process.env.ATTENDANCE_CHANNEL_ID || "attendance"; // Use environment variable or fallback
+      process.env.ATTENDANCE_CHANNEL_ID || "attendance";
     await client.chat.postMessage({
       channel: attendanceChannelId,
       text: `<@${userId}> has jibbled out at ${now.toLocaleTimeString()}.`,
