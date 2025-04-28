@@ -2536,12 +2536,11 @@ const checkIn = async ({ command, ack, client, body }) => {
     await attendance.save();
 
     // Send message to the user
-    await client.chat.postMessage({
-      channel: userId,
-      text: `You have jibbled in at ${now.toLocaleTimeString()}.`,
-    });
+    // await client.chat.postMessage({
+    //   channel: userId,
+    //   text: `You have jibbled in at ${now.toLocaleTimeString()}.`,
+    // });
 
-    // Send message to the attendance channel
     const attendanceChannelId =
       process.env.ATTENDANCE_CHANNEL_ID || "attendance"; // Use environment variable or fallback
     await client.chat.postMessage({
@@ -2577,10 +2576,10 @@ const checkOut = async ({ ack, body, client }) => {
     await attendance.save();
 
     // Send message to the user
-    await client.chat.postMessage({
-      channel: userId,
-      text: `You have jibbled out at ${now.toLocaleTimeString()}.`,
-    });
+    // await client.chat.postMessage({
+    //   channel: userId,
+    //   text: `You have jibbled out at ${now.toLocaleTimeString()}.`,
+    // });
 
     // Send message to the attendance channel
     const attendanceChannelId =
