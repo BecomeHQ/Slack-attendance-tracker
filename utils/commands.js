@@ -2534,9 +2534,20 @@ const checkIn = async ({ command, ack, client, body }) => {
 
   try {
     await attendance.save();
+
+    // Send message to the user
     await client.chat.postMessage({
       channel: userId,
       text: `You have checked in at ${now.toLocaleTimeString()}.`,
+    });
+
+    // Send message to the attendance channel
+    const attendanceChannelId =
+      process.env.ATTENDANCE_CHANNEL_ID || "attendance"; // Use environment variable or fallback
+    await client.chat.postMessage({
+      channel: attendanceChannelId,
+      text: `<@${userId}> checked in at ${now.toLocaleTimeString()}.`,
+      unfurl_links: false,
     });
   } catch (error) {
     console.error("Error saving check-in:", error);
@@ -2573,9 +2584,19 @@ const checkOut = async ({ ack, body, client }) => {
     attendance.checkoutTime = time;
     await attendance.save();
 
+    // Send message to the user
     await client.chat.postMessage({
       channel: userId,
       text: `You have checked out at ${now.toLocaleTimeString()}.`,
+    });
+
+    // Send message to the attendance channel
+    const attendanceChannelId =
+      process.env.ATTENDANCE_CHANNEL_ID || "attendance"; // Use environment variable or fallback
+    await client.chat.postMessage({
+      channel: attendanceChannelId,
+      text: `<@${userId}> checked out at ${now.toLocaleTimeString()}.`,
+      unfurl_links: false,
     });
   } catch (error) {
     console.error("Error saving check-out:", error);
