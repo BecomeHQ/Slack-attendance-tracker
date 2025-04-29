@@ -2545,7 +2545,7 @@ const checkIn = async ({ command, ack, client, body }) => {
       process.env.ATTENDANCE_CHANNEL_ID || "attendance"; // Use environment variable or fallback
     await client.chat.postMessage({
       channel: attendanceChannelId,
-      text: `<@${userId}> has jibbled in at ${now.toLocaleTimeString()}.`,
+      text: `<@${userId}> has jibbled in at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
       unfurl_links: false,
     });
   } catch (error) {
@@ -2595,7 +2595,7 @@ const checkOut = async ({ ack, body, client }) => {
       process.env.ATTENDANCE_CHANNEL_ID || "attendance";
     await client.chat.postMessage({
       channel: attendanceChannelId,
-      text: `<@${userId}> has jibbled out at ${now.toLocaleTimeString()}.`,
+      text: `<@${userId}> has jibbled out at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
       unfurl_links: false,
     });
   } catch (error) {
