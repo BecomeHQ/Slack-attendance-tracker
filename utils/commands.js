@@ -865,6 +865,7 @@ const rejectLeave = async ({ ack, body, client, action }) => {
 const handleLeaveTypeSelection = async ({ ack, body, client }) => {
   await ack();
   const action = body.actions[0];
+  console.log((action));
 
   if (action.action_id === "select_sick_leave") {
     await client.views.update({
