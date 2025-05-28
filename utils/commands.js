@@ -1729,7 +1729,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         callback_id: "work_from_home_application_modal",
         title: {
           type: "plain_text",
-          text: "Apply for Work From Home Leave",
+          text: "Apply for WFH Leave",
         },
         blocks: [
           {
