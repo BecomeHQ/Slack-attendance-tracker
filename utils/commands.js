@@ -179,8 +179,8 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
 
     const totalLeaves = {
       sickLeave: 12,
-      casualLeave: 6,
-      burnout: 6,
+      casualLeave: 8,
+      burnout: 8,
       mensuralLeaves: 18,
       unpaidLeave: 20,
       internshipLeave: 10,
@@ -188,7 +188,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
       bereavementLeave: 5,
       maternityLeave: 13,
       paternityLeave: 20,
-      restrictedHoliday: 6,
+      restrictedHoliday: 4,
     };
 
     const leaveBalances = {
@@ -2668,10 +2668,10 @@ const checkBalance = async ({ command, ack, client, body }) => {
 
     const totalLeaves = {
       sickLeave: 12,
-      restrictedHoliday: 6,
-      burnout: 6,
+      restrictedHoliday: 4,
+      burnout: 8,
       mensuralLeaves: 18,
-      casualLeave: 6,
+      casualLeave: 8,
       maternityLeave: 13,
       unpaidLeave: 20,
       paternityLeave: 20,
