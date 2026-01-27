@@ -1,28 +1,24 @@
 const { PublicHoliday, RestrictedHoliday } = require("./models/holidays.js");
 
 const publicHolidaysList = [
-  { date: new Date("2025-01-01"), name: "New Year" },
-  { date: new Date("2025-01-14"), name: "Pongal" },
-  { date: new Date("2025-01-15"), name: "Thiruvalluvar Day" },
-  { date: new Date("2025-01-26"), name: "Republic Day" },
-  { date: new Date("2025-03-30"), name: "Telugu New Year/Ugadi" },
-  { date: new Date("2025-03-31"), name: "Ramzan/Idul Fitr" },
-  { date: new Date("2025-04-10"), name: "Mahavir Jayanti" },
-  { date: new Date("2025-04-14"), name: "Tamil New Year" },
-  { date: new Date("2025-04-14"), name: "Dr Ambedkar Jayanti" },
-  { date: new Date("2025-04-18"), name: "Good Friday" },
-  { date: new Date("2025-05-01"), name: "Worker's Day" },
-  { date: new Date("2025-06-07"), name: "Bakrid" },
-  { date: new Date("2025-07-06"), name: "Muharram" },
-  { date: new Date("2025-08-15"), name: "Independence Day" },
-  { date: new Date("2025-08-16"), name: "Krishna Jayanthi" },
-  { date: new Date("2025-08-27"), name: "Ganesh Chaturthi" },
-  { date: new Date("2025-09-05"), name: "Eid e Milad" },
-  { date: new Date("2025-10-01"), name: "Ayutha Pooja" },
-  { date: new Date("2025-10-02"), name: "Gandhi Jayanthi" },
-  { date: new Date("2025-10-02"), name: "Vijaya Dasami" },
-  { date: new Date("2025-10-20"), name: "Diwali" },
-  { date: new Date("2025-12-25"), name: "Christmas" },
+  { date: new Date("2026-01-01"), name: "New Year" },
+  { date: new Date("2026-01-15"), name: "Pongal" },
+  { date: new Date("2026-01-16"), name: "Thiruvalluvar Day" },
+  { date: new Date("2026-01-26"), name: "Republic Day" },
+  { date: new Date("2026-03-19"), name: "Telugu New Year/Ugadi" },
+  { date: new Date("2026-03-21"), name: "Ramzan/Idul Fitr" },
+  { date: new Date("2026-03-31"), name: "Mahavir Jayanthi" },
+  { date: new Date("2026-04-03"), name: "Good Friday" },
+  { date: new Date("2026-04-14"), name: "Tamil New Year" },
+  { date: new Date("2026-04-14"), name: "Dr Ambedkar Jayanthi" },
+  { date: new Date("2026-05-01"), name: "Worker's Day" },
+  { date: new Date("2026-05-28"), name: "Bakrid" },
+  { date: new Date("2026-06-26"), name: "Muharram" },
+  { date: new Date("2026-08-15"), name: "Independence Day" },
+  { date: new Date("2026-08-26"), name: "Eid-e-Milad" },
+  { date: new Date("2026-09-04"), name: "Krishna Jayanthi" },
+  { date: new Date("2026-09-14"), name: "Ganesh Chaturthi" },
+  { date: new Date("2026-10-02"), name: "Gandhi Jayanthi" },
 ];
 
 async function addPublicHolidays() {
@@ -34,7 +30,7 @@ async function addPublicHolidays() {
   }
 }
 
-addPublicHolidays();
+// addPublicHolidays();
 
 const restrictedHolidaysList = [
   { date: new Date("2025-01-06"), name: "Guru Gobind Singh's Birthday" },
@@ -72,7 +68,7 @@ async function addRestrictedHolidays() {
   }
 }
 
-addRestrictedHolidays();
+// addRestrictedHolidays();
 
 module.exports = {
   publicHolidaysList,
