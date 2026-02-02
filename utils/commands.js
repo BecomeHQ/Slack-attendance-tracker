@@ -178,18 +178,18 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
     }
 
     const totalLeaves = {
-      sickLeave: 12,
-      casualLeave: 8,
-      burnout: 8,
-      mensuralLeaves: 18,
-      unpaidLeave: 20,
-      internshipLeave: 10,
-      wfhLeave: 10,
-      bereavementLeave: 5,
-      maternityLeave: 13,
-      paternityLeave: 20,
-      restrictedHoliday: 4,
-    };
+        sickLeave: 12,
+        casualLeave: 8,
+        burnout: 8,
+        mensuralLeaves: 18,
+        unpaidLeave: 20,
+        internshipLeave: 10,
+        wfhLeave: 10,
+        bereavementLeave: 5,
+        maternityLeave: 65, // 13 weeks
+        paternityLeave: 20,
+        restrictedHoliday: 4,
+      };
 
     const leaveBalances = {
       sickLeave: totalLeaves.sickLeave - (user.sickLeave || 0),
@@ -2940,7 +2940,7 @@ const approveLeave = async ({ ack, body, client, action }) => {
 Take it easy and focus on getting better. If you need any health resources, check out Plum or reach out if anything is urgent. Wishing you a speedy recovery!\n\n${leaveDetails}\n\n*Remaining Sick Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Burnout_Leave") {
       user.burnout = (user.burnout || 0) + leaveDays;
-      remainingLeaveBalance = 6 - user.burnout;
+      remainingLeaveBalance = 8 - user.burnout;
       approvalMessage = `🧠 *Your burnout leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
@@ -2967,7 +2967,7 @@ Your well-being matters. Take this time to rest and reflect. It might help to ch
 Congratulations on this exciting new chapter! Wishing you and your family beautiful moments ahead.\n\n${leaveDetails}\n\n*Remaining Paternity Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Casual_Leave") {
       user.casualLeave = (user.casualLeave || 0) + leaveDays;
-      remainingLeaveBalance = 6 - user.casualLeave;
+      remainingLeaveBalance = 8 - user.casualLeave;
       approvalMessage = `🌼 *Your casual leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
@@ -2982,7 +2982,7 @@ We are deeply sorry for your loss. Our thoughts are with you, and we're here if 
       approvalMessage += `\n\n*Remaining Bereavement Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Restricted_Holiday") {
       user.restrictedHoliday = (user.restrictedHoliday || 0) + leaveDays;
-      remainingLeaveBalance = 6 - user.restrictedHoliday;
+      remainingLeaveBalance = 4 - user.restrictedHoliday;
       approvalMessage = `🌴 *Your leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
@@ -3025,17 +3025,18 @@ Wishing you a joyful and safe journey into motherhood. We can't wait to meet you
 We understand life can be unpredictable. If you need any assistance or resources during this time, don't hesitate to reach out.\n\n${leaveDetails}\n\n*Remaining Unpaid Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Work_from_Home") {
       user.wfhLeave = (user.wfhLeave || 0) + leaveDays;
-      remainingLeaveBalance = 4 - user.wfhLeave;
+      remainingLeaveBalance = 10 - user.wfhLeave;
       approvalMessage = `🏡 *Your WFH day for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
 Make yourself comfortable and stay productive. Remember, you can take 1 WFH day every week!\n\n${leaveDetails}\n\n*Remaining WFH Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Internship_Leave") {
       user.internshipLeave = (user.internshipLeave || 0) + leaveDays;
+      remainingLeaveBalance = 10 - user.internshipLeave;
       approvalMessage = `📚 *Your leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
-Take your well-deserved break!\n\n${leaveDetails}`;
+Take your well-deserved break!\n\n${leaveDetails}\n\n*Remaining Internship Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Compensatory_Leave") {
       user.compensatoryLeave = (user.compensatoryLeave || 0) + leaveDays;
       approvalMessage = `📚 *Your leave for ${formatDate(
