@@ -311,7 +311,8 @@ const verifyCasualLeave = async (
     return {
       isValid: false,
       message: `Exceeded the limit of 8 casual leaves per year. You have ${
-        8 - userData.casualLeave
+        8
+        - userData.casualLeave
       } casual leave days remaining.`,
     };
   }
