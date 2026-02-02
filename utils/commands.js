@@ -2667,15 +2667,17 @@ const checkBalance = async ({ command, ack, client, body }) => {
     }
 
     const totalLeaves = {
-      sickLeave: 12,
-      restrictedHoliday: 4,
-      burnout: 8,
-      mensuralLeaves: 18,
-      casualLeave: 8,
-      maternityLeave: 13,
-      unpaidLeave: 20,
-      paternityLeave: 20,
-      bereavementLeave: 5,
+        sickLeave: 12,
+        casualLeave: 8,
+        burnout: 8,
+        mensuralLeaves: 18,
+        unpaidLeave: 20,
+        internshipLeave: 10,
+        wfhLeave: 10,
+        bereavementLeave: 5,
+        maternityLeave: 65, // 13 weeks
+        paternityLeave: 20,
+        restrictedHoliday: 4,
     };
 
     const leaveBalances = {
