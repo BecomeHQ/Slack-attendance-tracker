@@ -3062,6 +3062,7 @@ Take your well-deserved break!\n\n${leaveDetails}`;
       ],
     });
 
+    // Notify the user directly
     await client.chat.postMessage({
       channel: leaveRequest.user,
       text: approvalMessage,
@@ -3075,6 +3076,34 @@ Take your well-deserved break!\n\n${leaveDetails}`;
         },
       ],
     });
+
+    // Also notify the attendance channel that this user is on leave
+    try {
+      const attendanceChannelId =
+        process.env.ATTENDANCE_CHANNEL_ID || "attendance";
+
+      const leaveDatesText = leaveRequest.dates
+        .map((date) => formatDate(date))
+        .join(", ");
+
+      const attendanceMessage = `<@${leaveRequest.user}> is on *${leaveRequest.leaveType}* for ${leaveDatesText}.`;
+
+      await client.chat.postMessage({
+        channel: attendanceChannelId,
+        text: attendanceMessage,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: attendanceMessage,
+            },
+          },
+        ],
+      });
+    } catch (attendanceError) {
+      console.error("Error notifying attendance channel about approved leave:", attendanceError);
+    }
   } catch (error) {
     console.error("Error approving leave:", error);
     await client.chat.postMessage({
