@@ -139,7 +139,7 @@ const verifySickLeave = async (
   };
 };
 
-const verifyBurnoutLeave = async (user, selectedDates, reason) => {
+const verifyBurnoutLeave = async (user, selectedDates, leaveDayArray, reason) => {
   if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
     return { isValid: false, message: "No dates provided for burnout leave." };
   }
@@ -151,6 +151,12 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
         "You can only take a maximum of 2 consecutive burnout leave days.",
     };
   }
+
+  const halfDays = leaveDayArray || Array(selectedDates.length).fill("Full_Day");
+  const totalRequestedDays = halfDays.reduce(
+    (total, dayType) => total + (dayType === "Full_Day" ? 1 : 0.5),
+    0
+  );
 
   const currentQuarter = Math.floor(new Date().getMonth() / 3);
   const quarterStart = new Date(
@@ -173,20 +179,23 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
   });
 
   leaves.forEach((doc) => {
-    leavesThisQuarter += doc.dates.filter(
-      (date) => date >= quarterStart && date <= quarterEnd
-    ).length;
+    const leaveDay = doc.leaveDay || [];
+    doc.dates.forEach((date, idx) => {
+      if (date >= quarterStart && date <= quarterEnd) {
+        leavesThisQuarter += leaveDay[idx] === "Half_Day" ? 0.5 : 1;
+      }
+    });
   });
 
   if (leavesThisQuarter >= 2) {
     return {
       isValid: false,
-      message: `You have already taken ${leavesThisQuarter} burnout leaves this quarter, and no more are allowed.`,
+      message: `You have already taken ${leavesThisQuarter} burnout leave days this quarter, and no more are allowed.`,
     };
-  } else if (leavesThisQuarter === 1 && selectedDates.length > 1) {
+  } else if (leavesThisQuarter + totalRequestedDays > 2) {
     return {
       isValid: false,
-      message: "You can only take one more burnout leave day this quarter.",
+      message: `You can only take ${2 - leavesThisQuarter} more burnout leave day(s) this quarter.`,
     };
   }
 
@@ -236,7 +245,7 @@ const verifyBurnoutLeave = async (user, selectedDates, reason) => {
     }
 
     const userData = await User.findOne({ slackId: user });
-    const totalBurnoutLeaves = userData.burnoutLeave + selectedDates.length;
+    const totalBurnoutLeaves = (userData?.burnout || 0) + totalRequestedDays;
     const remainingBurnoutLeaves = 6 - totalBurnoutLeaves;
     if (totalBurnoutLeaves > 6) {
       return {

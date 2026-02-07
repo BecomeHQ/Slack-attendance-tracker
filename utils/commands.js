@@ -1352,6 +1352,113 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           {
             type: "input",
+            block_id: "leave_type_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type for Date 1",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "Full Day" },
+                  value: "Full_Day",
+                },
+                {
+                  text: { type: "plain_text", text: "Half Day" },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type (Date 1)",
+            },
+          },
+          {
+            type: "input",
+            block_id: "half_day_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "First Half" },
+                  value: "First_Half",
+                },
+                {
+                  text: { type: "plain_text", text: "Second Half" },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day (Date 1)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type for Date 2",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "Full Day" },
+                  value: "Full_Day",
+                },
+                {
+                  text: { type: "plain_text", text: "Half Day" },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type (Date 2)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "First Half" },
+                  value: "First_Half",
+                },
+                {
+                  text: { type: "plain_text", text: "Second Half" },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day (Date 2)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
             block_id: "reason",
             element: {
               type: "plain_text_input",
@@ -2345,6 +2452,113 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
           },
           {
             type: "input",
+            block_id: "leave_type_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type for Date 1",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "Full Day" },
+                  value: "Full_Day",
+                },
+                {
+                  text: { type: "plain_text", text: "Half Day" },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type (Date 1)",
+            },
+          },
+          {
+            type: "input",
+            block_id: "half_day_1",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "First Half" },
+                  value: "First_Half",
+                },
+                {
+                  text: { type: "plain_text", text: "Second Half" },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_1",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day (Date 1)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "leave_type_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select leave type for Date 2",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "Full Day" },
+                  value: "Full_Day",
+                },
+                {
+                  text: { type: "plain_text", text: "Half Day" },
+                  value: "Half_Day",
+                },
+              ],
+              action_id: "leave_type_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Type (Date 2)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
+            block_id: "half_day_2",
+            element: {
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: "Select half",
+              },
+              options: [
+                {
+                  text: { type: "plain_text", text: "First Half" },
+                  value: "First_Half",
+                },
+                {
+                  text: { type: "plain_text", text: "Second Half" },
+                  value: "Second_Half",
+                },
+              ],
+              action_id: "half_day_select_2",
+            },
+            label: {
+              type: "plain_text",
+              text: "Half Day (Date 2)",
+            },
+            optional: true,
+          },
+          {
+            type: "input",
             block_id: "reason",
             element: {
               type: "plain_text_input",
@@ -2922,7 +3136,10 @@ const approveLeave = async ({ ack, body, client, action }) => {
       throw new Error("User not found");
     }
 
-    const leaveDays = leaveRequest.leaveDay.reduce((total, dayType) => {
+    const leaveDayArr = Array.isArray(leaveRequest.leaveDay)
+      ? leaveRequest.leaveDay
+      : [leaveRequest.leaveDay || "Full_Day"];
+    const leaveDays = leaveDayArr.reduce((total, dayType) => {
       return total + (dayType === "Full_Day" ? 1 : 0.5);
     }, 0);
 
@@ -3641,10 +3858,20 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
   const user = body.user.id;
   const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
-  const startDate = view.state.values.dates_1.start_date_select.selected_date;
-  const endDate = view.state.values.dates_2.end_date_select.selected_date;
-  const reason = view.state.values.reason.reason_input.value;
+  const startDate = view.state.values.dates_1?.start_date_select?.selected_date;
+  const endDate = view.state.values.dates_2?.end_date_select?.selected_date;
+  const reason = view.state.values.reason?.reason_input?.value;
   const selectedDates = [startDate, endDate].filter(Boolean);
+  const leaveType1 = view.state.values.leave_type_1?.leave_type_select_1?.selected_option?.value || "Full_Day";
+  const halfDay1 = view.state.values.half_day_1?.half_day_select_1?.selected_option?.value || "Full_Day";
+  const leaveType2 = view.state.values.leave_type_2?.leave_type_select_2?.selected_option?.value || "Full_Day";
+  const halfDay2 = view.state.values.half_day_2?.half_day_select_2?.selected_option?.value || "Full_Day";
+  const leaveDayArray = selectedDates.map((_, i) => (i === 0 ? leaveType1 : leaveType2));
+  const leaveTimeArray = selectedDates.map((_, i) => {
+    const type = i === 0 ? leaveType1 : leaveType2;
+    const half = i === 0 ? halfDay1 : halfDay2;
+    return type === "Half_Day" ? half : "Full_Day";
+  });
   try {
     console.log("Selected Dates:", selectedDates);
     console.log("Reason for leave:", reason);
@@ -3661,6 +3888,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
     const verificationResult = await verifyBurnoutLeave(
       user,
       selectedDates,
+      leaveDayArray,
       reason
     );
 
@@ -3672,19 +3900,21 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       return;
     }
 
-    const leaveDetails = `*Leave Type:* Burnout_Leave\n*From Date:* ${new Date(
-      selectedDates[0]
-    ).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    })}\n*To Date:* ${new Date(
-      selectedDates[selectedDates.length - 1]
-    ).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    })}\n*Reason:* ${reason || "No reason provided"}`;
+    const leaveDetails =
+      `*Leave Type:* Burnout_Leave\n` +
+      selectedDates
+        .map((date, i) => {
+          const fromDate = new Date(date).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+          const type = leaveDayArray[i];
+          const half = leaveTimeArray[i];
+          return `*Date:* ${fromDate}\n*Type:* ${type}${type === "Half_Day" ? `\n*Half Day:* ${half}` : ""}`;
+        })
+        .join("\n\n") +
+      `\n*Reason:* ${reason || "No reason provided"}`;
 
     try {
       const leave = new Leave({
@@ -3692,8 +3922,8 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
         dates: selectedDates,
         reason,
         leaveType: "Burnout_Leave",
-        leaveDay: Array(selectedDates.length).fill("Full_Day"),
-        leaveTime: Array(selectedDates.length).fill("Full_Day"),
+        leaveDay: leaveDayArray,
+        leaveTime: leaveTimeArray,
       });
       await leave.save();
 
@@ -4446,12 +4676,23 @@ const handleCompensatoryLeaveSubmission = async ({
   const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
-    view.state.values.dates_1.date_select_1.selected_date,
-    view.state.values.dates_2.date_select_2.selected_date,
+    view.state.values.dates_1?.date_select_1?.selected_date,
+    view.state.values.dates_2?.date_select_2?.selected_date,
   ].filter(Boolean);
 
+  const leaveType1 = view.state.values.leave_type_1?.leave_type_select_1?.selected_option?.value || "Full_Day";
+  const halfDay1 = view.state.values.half_day_1?.half_day_select_1?.selected_option?.value || "Full_Day";
+  const leaveType2 = view.state.values.leave_type_2?.leave_type_select_2?.selected_option?.value || "Full_Day";
+  const halfDay2 = view.state.values.half_day_2?.half_day_select_2?.selected_option?.value || "Full_Day";
+  const leaveDayArray = selectedDates.map((_, i) => (i === 0 ? leaveType1 : leaveType2));
+  const leaveTimeArray = selectedDates.map((_, i) => {
+    const type = i === 0 ? leaveType1 : leaveType2;
+    const half = i === 0 ? halfDay1 : halfDay2;
+    return type === "Half_Day" ? half : "Full_Day";
+  });
+
   const reason =
-    view.state.values.reason.reason_input.value || "No reason provided";
+    view.state.values.reason?.reason_input?.value || "No reason provided";
 
   if (selectedDates.length === 0) {
     await client.chat.postMessage({
@@ -4475,19 +4716,21 @@ const handleCompensatoryLeaveSubmission = async ({
   //   return;
   // }
 
-  const leaveDetails = `*Leave Type:* Compensatory_Leave\n*From Date:* ${new Date(
-    selectedDates[0]
-  ).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })}\n*To Date:* ${new Date(
-    selectedDates[selectedDates.length - 1]
-  ).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })}\n*Reason:* ${reason || "No reason provided"}`;
+  const leaveDetails =
+    `*Leave Type:* Compensatory_Leave\n` +
+    selectedDates
+      .map((date, i) => {
+        const fromDate = new Date(date).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        const type = leaveDayArray[i];
+        const half = leaveTimeArray[i];
+        return `*Date:* ${fromDate}\n*Type:* ${type}${type === "Half_Day" ? `\n*Half Day:* ${half}` : ""}`;
+      })
+      .join("\n\n") +
+    `\n*Reason:* ${reason || "No reason provided"}`;
 
   try {
     const leave = new Leave({
@@ -4496,8 +4739,8 @@ const handleCompensatoryLeaveSubmission = async ({
       dates: selectedDates.map((date) => new Date(date)),
       status: "Pending",
       leaveType: "Compensatory_Leave",
-      leaveDay: "Full_Day",
-      leaveTime: "Full_Day",
+      leaveDay: leaveDayArray,
+      leaveTime: leaveTimeArray,
     });
     await leave.save();
 
