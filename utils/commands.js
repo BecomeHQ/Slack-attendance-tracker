@@ -40,6 +40,17 @@ const isWeekendOrPublicHoliday = (date) => {
   return isWeekend || isPublicHoliday;
 };
 
+/** Fetch Slack user's full/real name so leave requests show FULL NAME (not username). */
+const getSlackUserDisplayName = async (client, userId) => {
+  try {
+    const result = await client.users.info({ user: userId });
+    const u = result?.user;
+    return u?.real_name || u?.profile?.real_name || u?.name || u?.username || null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
 
@@ -3119,7 +3130,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3256,7 +3267,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3380,7 +3391,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3515,7 +3526,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -3629,7 +3640,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
 const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const startDate = view.state.values.dates_1.start_date_select.selected_date;
   const endDate = view.state.values.dates_2.end_date_select.selected_date;
   const reason = view.state.values.reason.reason_input.value;
@@ -3762,7 +3773,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
 const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
   await ack();
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const selectedDates = [
     view.state.values.date.date_select.selected_date,
     view.state.values.date_2.date_select_2.selected_date,
@@ -3882,7 +3893,7 @@ const handleBereavementLeaveSubmission = async ({
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -3984,7 +3995,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -4086,7 +4097,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const startDate =
     view.state.values.start_date.start_date_select.selected_date;
   const endDate =
@@ -4193,7 +4204,7 @@ const handleRestrictedHolidaySubmission = async ({
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
@@ -4301,7 +4312,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
     view.state.values.dates_2?.date_select_2?.selected_date,
@@ -4432,7 +4443,7 @@ const handleCompensatoryLeaveSubmission = async ({
   await ack();
 
   const user = body.user.id;
-  const userName = body.user.username;
+  const userName = (await getSlackUserDisplayName(client, user)) || body.user.username;
 
   const selectedDates = [
     view.state.values.dates_1.date_select_1.selected_date,
