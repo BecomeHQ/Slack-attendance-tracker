@@ -1016,14 +1016,19 @@ const verifyPersonalLeave = async (user, fromDate, toDate) => {
       diffDays++;
     }
   }
-
+  // NOTE: Previously, personal leave was tied to restricted holiday rules:
+  // - Limited to 6 restricted holidays per year
+  // - Only allowed to be updated in the first week of each quarter
+  // That logic has been temporarily disabled to open restricted holidays for all.
+  // The original implementation is preserved below for reference.
+  //
   if (diffDays > 6) {
     return {
       isValid: false,
       message: "You can choose up to 6 restricted holidays in a year.",
     };
   }
-
+  
   let restrictedHolidaysTaken = 0;
   try {
     const userData = await User.findOne({ slackId: user });
@@ -1038,23 +1043,23 @@ const verifyPersonalLeave = async (user, fromDate, toDate) => {
         "An error occurred while fetching your leave records. Please try again later.",
     };
   }
-
+  
   if (restrictedHolidaysTaken + diffDays > 6) {
     return {
       isValid: false,
       message: `You have already taken ${restrictedHolidaysTaken} restricted holidays. You can only take up to 6 in total.`,
     };
   }
-
-  const currentMonth = new Date().getMonth();
-  const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
-  if (!isQuarterStart) {
-    return {
-      isValid: false,
-      message:
-        "Restricted holidays should be updated quarterly, during the first week of January, April, July, and October.",
-    };
-  }
+  
+  // const currentMonth = new Date().getMonth();
+  // const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
+  // if (!isQuarterStart) {
+  //   return {
+  //     isValid: false,
+  //     message:
+  //       "Restricted holidays should be updated quarterly, during the first week of January, April, July, and October.",
+  //   };
+  // }
 
   return {
     isValid: true,
@@ -1070,35 +1075,44 @@ const verifyRestrictedHoliday = async (user, selectedDates) => {
       message: "No dates provided for restricted holiday.",
     };
   }
-
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
-  const isFirstWeek = currentDate.getDate() <= 7;
-
-  if (!isQuarterStart || !isFirstWeek) {
-    return {
-      isValid: false,
-      message:
-        "Restricted holidays should be applied for the entire quarter and only in the first week of January, April, July, and October.",
-    };
-  }
-
-  const quarterStartDate = new Date(currentDate.getFullYear(), currentMonth, 1);
-  const quarterEndDate = new Date(
-    currentDate.getFullYear(),
-    currentMonth + 3,
-    0
-  );
+  // NOTE: Previously, restricted holidays could only be chosen:
+  // - In the first week of each quarter (Jan/Apr/Jul/Oct)
+  // - For dates strictly within the current quarter
+  // That quarterly restriction has been disabled so restricted holidays are open for all now.
+  // The original implementation is preserved below for reference.
+  //
+  // const currentDate = new Date();
+  // const currentMonth = currentDate.getMonth();
+  // const isQuarterStart = [0, 3, 6, 9].includes(currentMonth);
+  // const isFirstWeek = currentDate.getDate() <= 7;
+  //
+  // if (!isQuarterStart || !isFirstWeek) {
+  //   return {
+  //     isValid: false,
+  //     message:
+  //       "Restricted holidays should be applied for the entire quarter and only in the first week of January, April, July, and October.",
+  //   };
+  // }
+  //
+  // const quarterStartDate = new Date(
+  //   currentDate.getFullYear(),
+  //   currentMonth,
+  //   1
+  // );
+  // const quarterEndDate = new Date(
+  //   currentDate.getFullYear(),
+  //   currentMonth + 3,
+  //   0
+  // );
 
   for (const date of selectedDates) {
     const selectedDate = new Date(date);
-    if (selectedDate < quarterStartDate || selectedDate > quarterEndDate) {
-      return {
-        isValid: false,
-        message: "Selected dates must be within the current quarter.",
-      };
-    }
+    // if (selectedDate < quarterStartDate || selectedDate > quarterEndDate) {
+    //   return {
+    //     isValid: false,
+    //     message: "Selected dates must be within the current quarter.",
+    //   };
+    // }
 
     if (isWeekendOrPublicHoliday(selectedDate)) {
       return {
