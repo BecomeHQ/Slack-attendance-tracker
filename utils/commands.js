@@ -825,6 +825,113 @@ const rejectLeave = async ({ ack, body, client, action }) => {
   }
 
   try {
+    const leaveRequest = await Leave.findById(leaveId);
+
+    if (!leaveRequest) {
+      throw new Error("Leave request not found");
+    }
+
+    const userName =
+      (await getSlackUserDisplayName(client, leaveRequest.user)) ||
+      leaveRequest.user;
+
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "reject_leave_reason_modal",
+        private_metadata: JSON.stringify({
+          leaveId,
+          channelId: body.channel.id,
+          messageTs: body.message.ts,
+        }),
+        title: {
+          type: "plain_text",
+          text: "Reject Leave Request",
+        },
+        submit: {
+          type: "plain_text",
+          text: "Submit",
+        },
+        close: {
+          type: "plain_text",
+          text: "Cancel",
+        },
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `You are rejecting a leave request from *<@${leaveRequest.user}>* (${userName}).\n\n*Duration:* ${formatDate(
+                formatDate(leaveRequest.dates[0])
+              )} to ${formatDate(
+                formatDate(
+                  leaveRequest.dates[leaveRequest.dates.length - 1]
+                )
+              )}\n*Leave Type:* ${leaveRequest.leaveType}`,
+            },
+          },
+          {
+            type: "input",
+            block_id: "rejection_reason_block",
+            element: {
+              type: "plain_text_input",
+              action_id: "rejection_reason_input",
+              multiline: true,
+              placeholder: {
+                type: "plain_text",
+                text: "Provide a clear reason for rejecting this leave request",
+              },
+            },
+            label: {
+              type: "plain_text",
+              text: "Rejection reason (required)",
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("Error opening rejection modal:", error);
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "An error occurred while opening the rejection form. Please try again.",
+    });
+  }
+};
+
+const handleRejectLeaveReasonSubmission = async ({ ack, body, view, client }) => {
+  const { leaveId, channelId, messageTs } = JSON.parse(
+    view.private_metadata || "{}"
+  );
+
+  const rejectionReason =
+    view.state.values.rejection_reason_block.rejection_reason_input.value?.trim() ||
+    "";
+
+  if (!leaveId) {
+    await ack();
+    console.error("Leave ID missing in rejection modal submission.");
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "Unable to process this rejection because the leave ID was missing. Please try again.",
+    });
+    return;
+  }
+
+  if (!rejectionReason) {
+    await ack({
+      response_action: "errors",
+      errors: {
+        rejection_reason_block: "Please provide a reason for rejecting this leave.",
+      },
+    });
+    return;
+  }
+
+  await ack();
+
+  try {
     const leaveRequest = await Leave.findByIdAndUpdate(
       leaveId,
       { status: "Rejected" },
@@ -832,14 +939,17 @@ const rejectLeave = async ({ ack, body, client, action }) => {
     );
 
     if (!leaveRequest) {
-      throw new Error("Leave request not found");
+      throw new Error("Leave request not found while saving rejection reason");
     }
-    await client.chat.update({
-      channel: body.channel.id,
-      ts: body.message.ts,
-      text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
-      blocks: [],
-    });
+
+    if (channelId && messageTs) {
+      await client.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
+        blocks: [],
+      });
+    }
 
     await client.chat.postMessage({
       channel: leaveRequest.user,
@@ -856,16 +966,23 @@ const rejectLeave = async ({ ack, body, client, action }) => {
             text: `Your leave request has been *rejected* ❌\n\n*Duration:* ${formatDate(
               formatDate(leaveRequest.dates[0])
             )} to ${formatDate(
-              formatDate(leaveRequest.dates[leaveRequest.dates.length - 1])
+              formatDate(
+                leaveRequest.dates[leaveRequest.dates.length - 1]
+              )
             )}\n*Leave Type:* ${
               leaveRequest.leaveType
-            }\n\nPlease contact your lead for more info.`,
+            }\n*Reason for rejection:* ${rejectionReason}`,
           },
         },
       ],
     });
+
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "The leave request has been rejected and the reason has been shared with the applicant.",
+    });
   } catch (error) {
-    console.error("Error rejecting leave:", error);
+    console.error("Error processing leave rejection:", error);
     await client.chat.postMessage({
       channel: body.user.id,
       text: "An error occurred while rejecting the leave request. Please try again.",
@@ -4802,6 +4919,7 @@ module.exports = {
   manageLeaves,
   approveLeave,
   rejectLeave,
+  handleRejectLeaveReasonSubmission,
   checkIn,
   checkOut,
   onLeave,

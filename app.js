@@ -7,6 +7,7 @@ const {
   manageLeaves,
   approveLeave,
   rejectLeave,
+  handleRejectLeaveReasonSubmission,
   checkIn,
   checkOut,
   onLeave,
@@ -97,6 +98,8 @@ app.view(
   "restricted_holiday_application_modal",
   handleRestrictedHolidaySubmission
 );
+
+app.view("reject_leave_reason_modal", handleRejectLeaveReasonSubmission);
 
 app.command("/manage-leaves", manageLeaves);
 
