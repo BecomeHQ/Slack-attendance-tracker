@@ -31,6 +31,7 @@ const {
   handleMaternityLeaveSubmission,
   handlePaternityLeaveSubmission,
   handleRestrictedHolidaySubmission,
+  scheduleJibbleInReminder,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -136,4 +137,7 @@ app.view(
 (async () => {
   await app.start(process.env.PORT || 1000);
   console.log("⚡️ Slack Bolt app is running!");
+
+   // Start daily 11:00 AM jibble-in reminder scheduler
+   scheduleJibbleInReminder();
 })();

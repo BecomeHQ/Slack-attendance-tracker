@@ -4914,6 +4914,103 @@ const handleCompensatoryLeaveSubmission = async ({
   }
 };
 
+/**
+ * Schedule a daily reminder at 11:00 AM for users
+ * who have not jibbled in and are not on approved leave.
+ *
+ * Message:
+ * "⏰ Reminder: Please make sure to Jibble in by 11:30 AM.
+ * Not jibbled in by then will be marked as Half-Day Leave."
+ */
+const scheduleJibbleInReminder = () => {
+  let lastRunDate = null;
+
+  const checkAndSendReminders = async () => {
+    const now = new Date();
+    const currentDateStr = now.toISOString().split("T")[0];
+
+    // Reset daily
+    if (lastRunDate && lastRunDate !== currentDateStr) {
+      lastRunDate = null;
+    }
+
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Run once at 11:00 AM each day
+    if (currentHour !== 11 || currentMinute !== 0 || lastRunDate === currentDateStr) {
+      return;
+    }
+
+    lastRunDate = currentDateStr;
+
+    try {
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(now);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Fetch all registered Slack users
+      const users = await User.find({});
+      if (!users || users.length === 0) {
+        return;
+      }
+
+      const slackIds = users.map((u) => u.slackId);
+
+      // Users who have already jibbled in today
+      const todaysAttendance = await Attendance.find({
+        user: { $in: slackIds },
+        date: currentDateStr,
+      });
+      const attendedUserIds = new Set(todaysAttendance.map((a) => a.user));
+
+      // Users who are on approved leave today
+      const todaysLeaves = await Leave.find({
+        user: { $in: slackIds },
+        status: "Approved",
+        dates: {
+          $elemMatch: {
+            $gte: startOfDay,
+            $lte: endOfDay,
+          },
+        },
+      });
+      const onLeaveUserIds = new Set(todaysLeaves.map((l) => l.user));
+
+      const usersToRemind = users.filter(
+        (u) => !attendedUserIds.has(u.slackId) && !onLeaveUserIds.has(u.slackId)
+      );
+
+      if (usersToRemind.length === 0) {
+        return;
+      }
+
+      for (const user of usersToRemind) {
+        try {
+          await app.client.chat.postMessage({
+            channel: user.slackId,
+            text:
+              "⏰ Reminder: Please make sure to Jibble in by 11:30 AM.\n" +
+              "Not jibbled in by then will be marked as Half-Day Leave.",
+          });
+        } catch (postError) {
+          console.error(
+            `Failed to send jibble-in reminder to user ${user.slackId}:`,
+            postError
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error while processing jibble-in reminders:", error);
+    }
+  };
+
+  // Check once per minute
+  setInterval(checkAndSendReminders, 60 * 1000);
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -4944,4 +5041,5 @@ module.exports = {
   handleRestrictedHolidaySubmission,
   handleInternshipLeaveSubmission,
   handleCompensatoryLeaveSubmission,
+  scheduleJibbleInReminder,
 };
