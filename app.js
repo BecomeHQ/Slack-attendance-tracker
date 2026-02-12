@@ -32,6 +32,7 @@ const {
   handlePaternityLeaveSubmission,
   handleRestrictedHolidaySubmission,
   scheduleJibbleInReminder,
+  scheduleMonthlySummary,
 } = require("./utils/commands");
 const validNames = require("./utils/user");
 const { User } = require("./models/user");
@@ -140,4 +141,7 @@ app.view(
 
    // Start daily 11:00 AM jibble-in reminder scheduler
    scheduleJibbleInReminder();
+
+   // Start monthly attendance summary scheduler (runs on last day each month)
+   scheduleMonthlySummary();
 })();

@@ -5011,6 +5011,196 @@ const scheduleJibbleInReminder = () => {
   setInterval(checkAndSendReminders, 60 * 1000);
 };
 
+/**
+ * Schedule a monthly summary on the last day of each month.
+ *
+ * For each registered user, sends a DM with:
+ * - Number of working days in the month (days with a jibble-in record)
+ * - Number of leave days taken in the month
+ * - List of leave dates (and leave type) for the month
+ *
+ * Assumption: half-day leaves are counted as full leave days for this summary.
+ */
+const scheduleMonthlySummary = () => {
+  let lastRunMonth = null;
+
+  const checkAndSendMonthlySummaries = async () => {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-based
+
+    const currentMonthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    // Determine if today is the last day of the month
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const isLastDay = now.getDate() === lastDayOfMonth;
+
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Run once at 18:00 (6 PM) on the last day of the month
+    if (
+      !isLastDay ||
+      currentHour !== 18 ||
+      currentMinute !== 0 ||
+      lastRunMonth === currentMonthKey
+    ) {
+      return;
+    }
+
+    lastRunMonth = currentMonthKey;
+
+    try {
+      const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
+      const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+      // All registered users
+      const users = await User.find({});
+      if (!users || users.length === 0) {
+        return;
+      }
+
+      const slackIds = users.map((u) => u.slackId);
+
+      // All attendance records for this month
+      const attendanceMonthPrefix = `${currentMonthKey}-`;
+      const monthAttendance = await Attendance.find({
+        user: { $in: slackIds },
+        date: { $regex: `^${attendanceMonthPrefix}` },
+      });
+
+      // All approved leaves that touch this month
+      const monthLeaves = await Leave.find({
+        user: { $in: slackIds },
+        status: "Approved",
+        dates: {
+          $elemMatch: {
+            $gte: monthStart,
+            $lte: monthEnd,
+          },
+        },
+      });
+
+      // Group attendance by user -> set of dates
+      const attendanceByUser = new Map();
+      for (const a of monthAttendance) {
+        if (!attendanceByUser.has(a.user)) {
+          attendanceByUser.set(a.user, new Set());
+        }
+        attendanceByUser.get(a.user).add(a.date);
+      }
+
+      // Group leave dates by user (track half-day vs full-day)
+      const leaveInfoByUser = new Map();
+      for (const leave of monthLeaves) {
+        const userId = leave.user;
+        if (!leaveInfoByUser.has(userId)) {
+          leaveInfoByUser.set(userId, []);
+        }
+
+        const leaveDayArray = Array.isArray(leave.leaveDay)
+          ? leave.leaveDay
+          : [leave.leaveDay];
+
+        (leave.dates || []).forEach((rawDate, idx) => {
+          if (!rawDate) return;
+          const d = new Date(rawDate);
+          if (d < monthStart || d > monthEnd) return;
+
+          const leaveDayValue =
+            leaveDayArray[idx] !== undefined
+              ? leaveDayArray[idx]
+              : leaveDayArray[0];
+
+          let weight = 1;
+          if (
+            leaveDayValue === "Half_Day" ||
+            leaveDayValue === "First_Half" ||
+            leaveDayValue === "Second_Half"
+          ) {
+            weight = 0.5;
+          }
+
+          leaveInfoByUser.get(userId).push({
+            date: d,
+            leaveType: leave.leaveType,
+            leaveDay: leaveDayValue,
+            weight,
+          });
+        });
+      }
+
+      const monthNameFormatter = new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      const monthLabel = monthNameFormatter.format(monthStart);
+
+      for (const user of users) {
+        const userId = user.slackId;
+
+        const attendanceDatesSet = attendanceByUser.get(userId) || new Set();
+        const workingDaysCount = attendanceDatesSet.size;
+
+        const leaveEntries = leaveInfoByUser.get(userId) || [];
+        // Sort leave entries by date
+        leaveEntries.sort((a, b) => a.date - b.date);
+        const leaveDaysCount = leaveEntries.reduce(
+          (total, entry) => total + (entry.weight || 1),
+          0
+        );
+
+        const leaveDatesText =
+          leaveEntries.length === 0
+            ? "None"
+            : leaveEntries
+                .map((entry) => {
+                  const baseDate = dateFormatter.format(entry.date);
+                  if (
+                    entry.leaveDay === "Half_Day" ||
+                    entry.leaveDay === "First_Half" ||
+                    entry.leaveDay === "Second_Half"
+                  ) {
+                    return `• ${baseDate} (${entry.leaveType} - Half Day)`;
+                  }
+                  return `• ${baseDate} (${entry.leaveType})`;
+                })
+                .join("\n");
+
+        const summaryText =
+          `Here is your attendance summary for *${monthLabel}*:\n\n` +
+          `*Working days (jibbled in):* ${workingDaysCount}\n` +
+          `*Leave days taken:* ${leaveDaysCount}\n\n` +
+          `*Leave dates:*\n${leaveDatesText}`;
+
+        try {
+          await app.client.chat.postMessage({
+            channel: userId,
+            text: summaryText,
+          });
+        } catch (postError) {
+          console.error(
+            `Failed to send monthly summary to user ${userId}:`,
+            postError
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error while processing monthly summaries:", error);
+    }
+  };
+
+  // Check once per minute
+  setInterval(checkAndSendMonthlySummaries, 60 * 1000);
+};
+
 module.exports = {
   applyLeave,
   manageLeaves,
@@ -5042,4 +5232,5 @@ module.exports = {
   handleInternshipLeaveSubmission,
   handleCompensatoryLeaveSubmission,
   scheduleJibbleInReminder,
+  scheduleMonthlySummary,
 };
