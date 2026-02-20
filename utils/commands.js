@@ -3,7 +3,7 @@ const {
   verifySickLeave,
   verifyBurnoutLeave,
   verifyCasualLeave,
-  verifyMensuralLeave,
+  verifyMenstrualLeave,
   verifyMaternityLeave,
   verifyPaternityLeave,
   verifyBereavementLeave,
@@ -192,7 +192,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
         sickLeave: 12,
         casualLeave: 8,
         burnout: 8,
-        mensuralLeaves: 18,
+        menstrualLeaves: 18,
         unpaidLeave: 20,
         internshipLeave: 10,
         wfhLeave: 10,
@@ -206,7 +206,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
       sickLeave: totalLeaves.sickLeave - (user.sickLeave || 0),
       casualLeave: totalLeaves.casualLeave - (user.casualLeave || 0),
       burnout: totalLeaves.burnout - (user.burnout || 0),
-      mensuralLeaves: totalLeaves.mensuralLeaves - (user.mensuralLeaves || 0),
+      menstrualLeaves: totalLeaves.menstrualLeaves - (user.menstrualLeaves || 0),
       unpaidLeave: totalLeaves.unpaidLeave - (user.unpaidLeave || 0),
       internshipLeave:
         totalLeaves.internshipLeave - (user.internshipLeave || 0),
@@ -270,10 +270,10 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: `Mensural Leave (${leaveBalances.mensuralLeaves})`,
+                  text: `Menstrual Leave (${leaveBalances.menstrualLeaves})`,
                 },
-                value: "mensural_leave",
-                action_id: "select_mensural_leave",
+                value: "menstrual_leave",
+                action_id: "select_menstrual_leave",
               },
               {
                 type: "button",
@@ -1594,15 +1594,15 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         },
       },
     });
-  } else if (action.action_id === "select_mensural_leave") {
+  } else if (action.action_id === "select_menstrual_leave") {
     await client.views.update({
       view_id: body.view.id,
       view: {
         type: "modal",
-        callback_id: "mensural_leave_application_modal",
-        title: {
-          type: "plain_text",
-          text: "Apply for Mensural Leave",
+        callback_id: "menstrual_leave_application_modal",
+          title: {
+            type: "plain_text",
+          text: "Apply for Menstrual Leave",
         },
         blocks: [
           {
@@ -3012,7 +3012,7 @@ const checkBalance = async ({ command, ack, client, body }) => {
         sickLeave: 12,
         casualLeave: 8,
         burnout: 8,
-        mensuralLeaves: 18,
+        menstrualLeaves: 18,
         unpaidLeave: 20,
         internshipLeave: 10,
         wfhLeave: 10,
@@ -3027,7 +3027,7 @@ const checkBalance = async ({ command, ack, client, body }) => {
       restrictedHoliday:
         totalLeaves.restrictedHoliday - (user.restrictedHoliday || 0),
       burnout: totalLeaves.burnout - (user.burnout || 0),
-      mensuralLeaves: totalLeaves.mensuralLeaves - (user.mensuralLeaves || 0),
+      menstrualLeaves: totalLeaves.menstrualLeaves - (user.menstrualLeaves || 0),
       casualLeave: totalLeaves.casualLeave - (user.casualLeave || 0),
       maternityLeave: totalLeaves.maternityLeave - (user.maternityLeave || 0),
       unpaidLeave: totalLeaves.unpaidLeave - (user.unpaidLeave || 0),
@@ -3041,7 +3041,7 @@ const checkBalance = async ({ command, ack, client, body }) => {
       - Sick Leave: ${leaveBalances.sickLeave} days remaining
       - Restricted Holiday: ${leaveBalances.restrictedHoliday} days remaining
       - Burnout: ${leaveBalances.burnout} days remaining
-      - Mensural Leaves: ${leaveBalances.mensuralLeaves} days remaining
+      - Menstrual Leaves: ${leaveBalances.menstrualLeaves} days remaining
       - Casual Leave: ${leaveBalances.casualLeave} days remaining
       - Maternity Leave: ${leaveBalances.maternityLeave} weeks remaining
       - Unpaid Leave: ${leaveBalances.unpaidLeave} days remaining
@@ -3334,15 +3334,15 @@ We are deeply sorry for your loss. Our thoughts are with you, and we're here if 
         leaveRequest.dates[0]
       )} is approved*
 You have ${remainingLeaveBalance} restricted holidays remaining for the year. Hope you make the most of your break. Take this time to relax and recharge!\n\n${leaveDetails}\n\n*Remaining Restricted Holiday Balance:* \`${remainingLeaveBalance} days\``;
-    } else if (leaveRequest.leaveType === "Mensural_Leave") {
-      console.log("Mensural Leave");
+    } else if (leaveRequest.leaveType === "Menstrual_Leave") {
+      console.log("Menstrual Leave");
 
-      user.mensuralLeaves = (user.mensuralLeaves || 0) + leaveDays;
-      remainingLeaveBalance = 18 - user.mensuralLeaves;
+      user.menstrualLeaves = (user.menstrualLeaves || 0) + leaveDays;
+      remainingLeaveBalance = 18 - user.menstrualLeaves;
       approvalMessage = `💗 *Your menstrual leave for ${formatDate(
         leaveRequest.dates[0]
       )} is approved*
-Rest well and take care. Let us know if you need any support.\n\n${leaveDetails}\n\n*Remaining Mensural Leave Balance:* \`${remainingLeaveBalance} days\``;
+Rest well and take care. Let us know if you need any support.\n\n${leaveDetails}\n\n*Remaining Menstrual Leave Balance:* \`${remainingLeaveBalance} days\``;
     } else if (leaveRequest.leaveType === "Maternity_Leave") {
       let diffDays = 0;
       let startDate = new Date(leaveRequest.dates[0]);
@@ -3721,7 +3721,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
   }
 };
 
-const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
+const handleMenstrualLeaveSubmission = async ({ ack, body, view, client }) => {
   await ack();
 
   const user = body.user.id;
@@ -3745,7 +3745,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     console.error("No valid dates selected.");
     await client.chat.postMessage({
       channel: user,
-      text: "No valid dates selected for mensural leave. Please try again.",
+      text: "No valid dates selected for menstrual leave. Please try again.",
     });
     return;
   }
@@ -3753,7 +3753,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
   const reason =
     view.state.values.reason.reason_input.value || "No reason provided";
 
-  const verificationResult = await verifyMensuralLeave(
+  const verificationResult = await verifyMenstrualLeave(
     user,
     selectedDates,
     leaveTypes,
@@ -3764,12 +3764,12 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
   if (!verificationResult.isValid) {
     await client.chat.postMessage({
       channel: user,
-      text: `Failed to submit mensural leave request: ${verificationResult.message}. Please check the dates and try again.`,
+      text: `Failed to submit menstrual leave request: ${verificationResult.message}. Please check the dates and try again.`,
     });
     return;
   }
   const leaveDetails =
-    `*Leave Type:* Mensural_Leave\n` +
+    `*Leave Type:* Menstrual_Leave\n` +
     selectedDates
       .map((date, index) => {
         const fromDate = new Date(date).toLocaleDateString("en-US", {
@@ -3788,7 +3788,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
       user,
       dates: selectedDates,
       reason,
-      leaveType: "Mensural_Leave",
+      leaveType: "Menstrual_Leave",
       leaveDay: leaveTypes,
       leaveTime: leaveTypes,
     });
@@ -3796,13 +3796,13 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
 
     await client.chat.postMessage({
       channel: user,
-      text: `:white_check_mark: Your mensural leave request has been submitted for approval!\n\n${leaveDetails}`,
+      text: `:white_check_mark: Your menstrual leave request has been submitted for approval!\n\n${leaveDetails}`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:white_check_mark: Your mensural leave request has been submitted for approval!\n\n${leaveDetails}`,
+            text: `:white_check_mark: Your menstrual leave request has been submitted for approval!\n\n${leaveDetails}`,
           },
         },
       ],
@@ -3811,13 +3811,13 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     const adminUserId = process.env.ADMIN_USER_ID;
     await client.chat.postMessage({
       channel: adminUserId,
-      text: `New mensural leave request received!`,
+      text: `New menstrual leave request received!`,
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `:bell: New mensural leave request received from @${userName}!\n\n${leaveDetails}`,
+            text: `:bell: New menstrual leave request received from @${userName}!\n\n${leaveDetails}`,
           },
         },
         {
@@ -3848,10 +3848,10 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
       ],
     });
   } catch (error) {
-    console.error("Error submitting mensural leave:", error);
+    console.error("Error submitting menstrual leave:", error);
     await client.chat.postMessage({
       channel: user,
-      text: `:x: There was an error submitting your mensural leave request. Please try again later.`,
+      text: `:x: There was an error submitting your menstrual leave request. Please try again later.`,
     });
   }
 };
@@ -5230,7 +5230,7 @@ module.exports = {
   handleAddMoreDays,
   handleDateSelectionSubmission,
   handleCasualLeaveSubmission,
-  handleMensuralLeaveSubmission,
+  handleMenstrualLeaveSubmission,
   handleUnpaidLeaveSubmission,
   handleBurnoutLeaveSubmission,
   handleWorkFromHomeSubmission,

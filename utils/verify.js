@@ -836,7 +836,7 @@ const verifyInternshipLeave = async (user, fromDate, toDate) => {
   };
 };
 
-const verifyMensuralLeave = async (
+const verifyMenstrualLeave = async (
   user,
   selectedDates,
   leaveTypes,
@@ -870,12 +870,12 @@ const verifyMensuralLeave = async (
     return date;
   };
 
-  const formattedMensuralLeaveDates = selectedDates.map(formatDate);
-  console.log("Formatted Dates for Verification:", formattedMensuralLeaveDates);
+  const formattedMenstrualLeaveDates = selectedDates.map(formatDate);
+  console.log("Formatted Dates for Verification:", formattedMenstrualLeaveDates);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (const date of formattedMensuralLeaveDates) {
+  for (const date of formattedMenstrualLeaveDates) {
     if (date < today) {
       return {
         isValid: false,
@@ -898,13 +898,13 @@ const verifyMensuralLeave = async (
     return total + (halfDays[index] === "Full_Day" ? 1 : 0.5);
   }, 0);
 
-  const totalMensuralLeaves = userData.mensuralLeave + totalLeaveDays;
-  const remainingMensuralLeaves = 18 - totalMensuralLeaves;
-  if (totalMensuralLeaves > 18) {
+  const totalMenstrualLeaves = userData.menstrualLeave + totalLeaveDays;
+  const remainingMenstrualLeaves = 18 - totalMenstrualLeaves;
+  if (totalMenstrualLeaves > 18) {
     return {
       isValid: false,
       message: `Exceeded the limit of 18 paid menstrual leaves per year. You have ${
-        remainingMensuralLeaves < 0 ? 0 : remainingMensuralLeaves
+        remainingMenstrualLeaves < 0 ? 0 : remainingMenstrualLeaves
       } menstrual leave days remaining.`,
     };
   }
@@ -912,7 +912,7 @@ const verifyMensuralLeave = async (
   const currentMonth = new Date().getMonth();
   const leavesThisMonth = await Leave.find({
     user: user,
-    leaveType: "Mensural_Leave",
+    leaveType: "Menstrual_Leave",
     dates: {
       $elemMatch: {
         $gte: new Date(new Date().getFullYear(), currentMonth, 1),
@@ -927,7 +927,7 @@ const verifyMensuralLeave = async (
   );
 
   console.log("hello1");
-  const mensuralLeavesThisMonth = leavesThisMonth.reduce((acc, leave) => {
+  const menstrualLeavesThisMonth = leavesThisMonth.reduce((acc, leave) => {
     console.log("hello");
     console.log(leave);
     return (
@@ -944,7 +944,7 @@ const verifyMensuralLeave = async (
     );
   }, 0);
 
-  if (mensuralLeavesThisMonth + totalLeaveDays > 1.5) {
+  if (menstrualLeavesThisMonth + totalLeaveDays > 1.5) {
     return {
       isValid: false,
       message:
@@ -952,7 +952,7 @@ const verifyMensuralLeave = async (
     };
   }
 
-  for (const date of formattedMensuralLeaveDates) {
+  for (const date of formattedMenstrualLeaveDates) {
     if (isWeekendOrPublicHoliday(date)) {
       return {
         isValid: false,
@@ -1397,7 +1397,7 @@ module.exports = {
   verifySickLeave,
   verifyBurnoutLeave,
   verifyCasualLeave,
-  verifyMensuralLeave,
+  verifyMenstrualLeave,
   verifyMaternityLeave,
   verifyPaternityLeave,
   verifyBereavementLeave,
