@@ -3145,6 +3145,105 @@ const upcomingLeaves = async ({ command, ack, client, body }) => {
   }
 };
 
+/**
+ * Allow a user to cancel their own upcoming leave, as long as it starts
+ * more than 24 hours from now.
+ */
+const cancelLeave = async ({ command, ack, client, body }) => {
+  await ack();
+
+  const userId = body.user_id;
+
+  try {
+    const now = new Date();
+
+    // Fetch this user's upcoming approved or pending leaves
+    const userLeaves = await Leave.find({
+      user: userId,
+      status: { $in: ["Approved", "Pending"] },
+      dates: { $elemMatch: { $gte: now } },
+    });
+
+    const cancellableLeaves = userLeaves.filter((leave) => {
+      if (!leave.dates || leave.dates.length === 0) return false;
+
+      const earliestDate = new Date(
+        Math.min(...leave.dates.map((d) => new Date(d).getTime()))
+      );
+      const diffMs = earliestDate.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      // Only allow cancellation if the leave starts in more than 24 hours
+      return diffHours >= 24;
+    });
+
+    if (cancellableLeaves.length === 0) {
+      await client.chat.postMessage({
+        channel: userId,
+        text:
+          "You don't have any upcoming leaves that can be cancelled.\n" +
+          "Leaves cannot be cancelled within 24 hours of the start date.",
+      });
+      return;
+    }
+
+    const blocks = cancellableLeaves
+      .map((leave, index) => {
+        const datesText = (leave.dates || [])
+          .map((date) => formatDate(date))
+          .join(", ");
+        const statusLabel =
+          leave.status === "Pending" ? " (Pending approval)" : "";
+
+        return [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text:
+                `*Leave ${index + 1}*${statusLabel}\n` +
+                `*Dates:* ${datesText}\n` +
+                `*Leave Type:* ${leave.leaveType}\n` +
+                `*Reason:* ${leave.reason || "No reason provided"}`,
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: {
+                  type: "plain_text",
+                  text: "Cancel this leave",
+                  emoji: true,
+                },
+                style: "danger",
+                action_id: `cancel_leave_${leave._id}`,
+              },
+            ],
+          },
+          {
+            type: "divider",
+          },
+        ];
+      })
+      .flat();
+
+    await client.chat.postMessage({
+      channel: userId,
+      text: "Select a leave to cancel:",
+      blocks,
+    });
+  } catch (error) {
+    console.error("Error fetching cancellable leaves:", error);
+    await client.chat.postMessage({
+      channel: userId,
+      text:
+        "An error occurred while fetching your cancellable leaves. Please try again.",
+    });
+  }
+};
+
 const manageLeaves = async ({ command, ack, client, body }) => {
   await ack();
 
@@ -3456,6 +3555,193 @@ Take your well-deserved break!\n\n${leaveDetails}`;
     await client.chat.postMessage({
       channel: body.user.id,
       text: "An error occurred while approving the leave request. Please try again.",
+    });
+  }
+};
+
+/**
+ * Handle the button click to cancel a specific leave.
+ * Reverts leave balances if the leave was already approved and
+ * marks the leave record as Cancelled.
+ */
+const handleCancelLeave = async ({ ack, body, client, action }) => {
+  await ack();
+
+  const leaveId = action.action_id.split("_")[2];
+
+  if (!leaveId) {
+    console.error("Leave ID is undefined for cancel action.");
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "An error occurred while cancelling the leave. Please try again.",
+    });
+    return;
+  }
+
+  try {
+    const leave = await Leave.findById(leaveId);
+
+    if (!leave) {
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text: "The leave request could not be found or was already updated.",
+      });
+      return;
+    }
+
+    // Ensure a user can only cancel their own leave
+    if (leave.user !== body.user.id) {
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text: "You can only cancel your own leave requests.",
+      });
+      return;
+    }
+
+    if (!leave.dates || leave.dates.length === 0) {
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text: "This leave request has no dates associated and cannot be cancelled.",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const earliestDate = new Date(
+      Math.min(...leave.dates.map((d) => new Date(d).getTime()))
+    );
+    const diffMs = earliestDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    // Do not allow cancellation if leave starts in less than 24 hours
+    if (diffHours < 24) {
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text:
+          "This leave starts in less than 24 hours and can no longer be cancelled.",
+      });
+      return;
+    }
+
+    // If the leave was already approved, revert the relevant leave counters
+    if (leave.status === "Approved") {
+      const user = await User.findOne({ slackId: leave.user });
+
+      if (user) {
+        const leaveDayArr = Array.isArray(leave.leaveDay)
+          ? leave.leaveDay
+          : [leave.leaveDay || "Full_Day"];
+        const leaveDays = leaveDayArr.reduce((total, dayType) => {
+          return total + (dayType === "Full_Day" ? 1 : 0.5);
+        }, 0);
+
+        const clampNonNegative = (value) => (value < 0 ? 0 : value);
+
+        if (leave.leaveType === "Sick_Leave") {
+          user.sickLeave = clampNonNegative((user.sickLeave || 0) - leaveDays);
+        } else if (leave.leaveType === "Burnout_Leave") {
+          user.burnout = clampNonNegative((user.burnout || 0) - leaveDays);
+        } else if (leave.leaveType === "Paternity_Leave") {
+          let diffDays = 0;
+          let startDate = new Date(leave.dates[0]);
+          let endDate = new Date(leave.dates[1]);
+          for (
+            let d = new Date(startDate);
+            d <= endDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            if (!isWeekendOrPublicHoliday(d)) {
+              diffDays++;
+            }
+          }
+          user.paternityLeave = clampNonNegative(
+            (user.paternityLeave || 0) - diffDays
+          );
+        } else if (leave.leaveType === "Casual_Leave") {
+          user.casualLeave = clampNonNegative(
+            (user.casualLeave || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Bereavement_Leave") {
+          user.bereavementLeave = clampNonNegative(
+            (user.bereavementLeave || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Restricted_Holiday") {
+          user.restrictedHoliday = clampNonNegative(
+            (user.restrictedHoliday || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Menstrual_Leave") {
+          user.menstrualLeaves = clampNonNegative(
+            (user.menstrualLeaves || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Maternity_Leave") {
+          let diffDays = 0;
+          let startDate = new Date(leave.dates[0]);
+          let endDate = new Date(leave.dates[1]);
+          for (
+            let d = new Date(startDate);
+            d <= endDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            if (!isWeekendOrPublicHoliday(d)) {
+              diffDays++;
+            }
+          }
+          user.maternityLeave = clampNonNegative(
+            (user.maternityLeave || 0) - diffDays
+          );
+        } else if (leave.leaveType === "Unpaid_Leave") {
+          user.unpaidLeave = clampNonNegative(
+            (user.unpaidLeave || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Work_from_Home") {
+          user.wfhLeave = clampNonNegative(
+            (user.wfhLeave || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Internship_Leave") {
+          user.internshipLeave = clampNonNegative(
+            (user.internshipLeave || 0) - leaveDays
+          );
+        } else if (leave.leaveType === "Compensatory_Leave") {
+          user.compensatoryLeave = clampNonNegative(
+            (user.compensatoryLeave || 0) - leaveDays
+          );
+        }
+
+        await user.save();
+      }
+    }
+
+    leave.status = "Cancelled";
+    await leave.save();
+
+    const leaveDatesText = (leave.dates || [])
+      .map((date) => formatDate(date))
+      .join(", ");
+
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: `Your *${leave.leaveType}* for ${leaveDatesText} has been cancelled.`,
+    });
+
+    try {
+      const attendanceChannelId =
+        process.env.ATTENDANCE_CHANNEL_ID || "attendance";
+
+      await client.chat.postMessage({
+        channel: attendanceChannelId,
+        text: `<@${leave.user}>'s *${leave.leaveType}* for ${leaveDatesText} has been cancelled.`,
+      });
+    } catch (attendanceError) {
+      console.error(
+        "Error notifying attendance channel about cancelled leave:",
+        attendanceError
+      );
+    }
+  } catch (error) {
+    console.error("Error cancelling leave:", error);
+    await client.chat.postMessage({
+      channel: body.user.id,
+      text: "An error occurred while cancelling the leave. Please try again.",
     });
   }
 };
@@ -5215,6 +5501,7 @@ module.exports = {
   manageLeaves,
   approveLeave,
   rejectLeave,
+  handleCancelLeave,
   handleRejectLeaveReasonSubmission,
   checkIn,
   checkOut,
@@ -5222,6 +5509,7 @@ module.exports = {
   checkBalance,
   showUpcomingHolidays,
   upcomingLeaves,
+   cancelLeave,
   handleLeaveTypeSelection,
   openLeaveTypeModal,
   handleSickLeaveSubmission,

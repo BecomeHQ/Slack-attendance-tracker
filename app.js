@@ -7,6 +7,7 @@ const {
   manageLeaves,
   approveLeave,
   rejectLeave,
+  handleCancelLeave,
   handleRejectLeaveReasonSubmission,
   checkIn,
   checkOut,
@@ -14,6 +15,7 @@ const {
   checkBalance,
   showUpcomingHolidays,
   upcomingLeaves,
+  cancelLeave,
   verifyInternshipLeave,
   openLeaveTypeModal,
   handleCompensatoryLeaveSubmission,
@@ -109,6 +111,8 @@ app.action(/approve_leave_(.*)/, approveLeave);
 
 app.action(/reject_leave_(.*)/, rejectLeave);
 
+app.action(/cancel_leave_(.*)/, handleCancelLeave);
+
 app.command("/jibble-in", checkIn);
 
 app.command("/jibble-out", checkOut);
@@ -120,6 +124,8 @@ app.command("/check-balance", checkBalance);
 app.command("/upcoming-holidays", showUpcomingHolidays);
 
 app.command("/upcoming-leaves", upcomingLeaves);
+
+app.command("/cancel-leave", cancelLeave);
 
 app.action(/select_(.*)_leave/, handleLeaveTypeSelection);
 app.action("select_restricted_leave", handleLeaveTypeSelection);
