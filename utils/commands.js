@@ -4006,6 +4006,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       user,
       selectedDates,
       leaveDayArray,
+      leaveTimeArray,
       reason
     );
 

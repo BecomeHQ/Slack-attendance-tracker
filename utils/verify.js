@@ -13,6 +13,135 @@ const isWeekendOrPublicHoliday = (date) => {
   return isWeekend || isPublicHoliday;
 };
 
+const validateOverlapWithHalfDayRules = async (
+  user,
+  date,
+  newLeaveType,
+  newDayType,
+  newHalfSlot
+) => {
+  const dateStr = date.toISOString().split("T")[0];
+
+  const existingLeaves = await Leave.find({
+    user: user,
+    dates: date,
+    status: "Approved",
+  });
+
+  if (!existingLeaves || existingLeaves.length === 0) {
+    return null;
+  }
+
+  // If the new leave is a full day, any existing leave is a conflict.
+  if (newDayType === "Full_Day") {
+    return `There is already an approved leave on ${dateStr}. Please select a different date.`;
+  }
+
+  const slot =
+    newHalfSlot ||
+    (newDayType === "First_Half" || newDayType === "Second_Half"
+      ? newDayType
+      : null);
+
+  // If we don't know which half is being requested, be conservative and
+  // disallow combining with any existing leave.
+  if (!slot) {
+    return `There is already an approved leave on ${dateStr}. Please select a different date.`;
+  }
+
+  const occupiedSlots = [];
+  let hasNonSickBurnout = false;
+
+  for (const leave of existingLeaves) {
+    const idx = leave.dates.findIndex(
+      (d) => d && d.getTime && d.getTime() === date.getTime()
+    );
+    if (idx === -1) {
+      continue;
+    }
+
+    const leaveType = leave.leaveType;
+    const dayType = Array.isArray(leave.leaveDay) ? leave.leaveDay[idx] : null;
+    const timeType = Array.isArray(leave.leaveTime)
+      ? leave.leaveTime[idx]
+      : null;
+
+    const isFullDay =
+      dayType === "Full_Day" || timeType === "Full_Day" || !dayType;
+
+    if (isFullDay) {
+      occupiedSlots.push({ slot: "First_Half", type: leaveType });
+      occupiedSlots.push({ slot: "Second_Half", type: leaveType });
+    } else {
+      let existingSlot = null;
+      if (leaveType === "Burnout_Leave") {
+        existingSlot = timeType || dayType;
+      } else {
+        existingSlot = dayType || timeType;
+      }
+
+      if (existingSlot === "First_Half" || existingSlot === "Second_Half") {
+        occupiedSlots.push({ slot: existingSlot, type: leaveType });
+      } else {
+        // Unknown half specification – treat as occupying the whole day.
+        occupiedSlots.push({ slot: "First_Half", type: leaveType });
+        occupiedSlots.push({ slot: "Second_Half", type: leaveType });
+      }
+    }
+
+    if (leaveType !== "Sick_Leave" && leaveType !== "Burnout_Leave") {
+      hasNonSickBurnout = true;
+    }
+  }
+
+  if (newLeaveType === "Casual_Leave") {
+    if (occupiedSlots.length > 0) {
+      return `Half-day Casual Leave cannot be combined with any other leave on ${dateStr}. Please select a different date.`;
+    }
+    return null;
+  }
+
+  if (newLeaveType === "Sick_Leave" || newLeaveType === "Burnout_Leave") {
+    // Half-day Sick/Burnout can only be combined with each other.
+    if (hasNonSickBurnout) {
+      return `Half-day ${newLeaveType.replace(
+        "_",
+        " "
+      )} can only be combined with a half-day of the other type on ${dateStr}.`;
+    }
+
+    const sameSlot = occupiedSlots.find((s) => s.slot === slot);
+    if (sameSlot) {
+      return `There is already a ${sameSlot.type.replace(
+        "_",
+        " "
+      )} applied for the ${slot === "First_Half" ? "first" : "second"} half of ${dateStr}.`;
+    }
+
+    const otherSlot = occupiedSlots.find((s) => s.slot !== slot);
+    if (!otherSlot) {
+      // No other half is used – safe to apply this half-day.
+      return null;
+    }
+
+    const expectedCounterpart =
+      newLeaveType === "Sick_Leave" ? "Burnout_Leave" : "Sick_Leave";
+
+    if (otherSlot.type !== expectedCounterpart) {
+      return `Only a half-day Sick Leave and a half-day Burnout Leave can be combined on the same day (${dateStr}).`;
+    }
+
+    if (occupiedSlots.length > 1) {
+      return `You can only combine one half-day Sick Leave with one half-day Burnout Leave on ${dateStr}.`;
+    }
+
+    return null;
+  }
+
+  // For all other leave types, keep the previous behavior: no overlaps.
+  return `There is already an approved leave on ${dateStr}. Please select a different date.`;
+};
+
 const verifySickLeave = async (
   user,
   selectedDates,
@@ -83,7 +212,10 @@ const verifySickLeave = async (
     };
   }
 
-  for (const date of formattedDates) {
+  for (let i = 0; i < formattedDates.length; i++) {
+    const date = formattedDates[i];
+    const dayType = halfDays[i] || "Full_Day";
+
     if (isWeekendOrPublicHoliday(date)) {
       return {
         isValid: false,
@@ -93,17 +225,17 @@ const verifySickLeave = async (
       };
     }
 
-    const overlappingLeave = await Leave.findOne({
-      user: user,
-      dates: date,
-      status: "Approved",
-    });
-    if (overlappingLeave) {
+    const overlapMessage = await validateOverlapWithHalfDayRules(
+      user,
+      date,
+      "Sick_Leave",
+      dayType,
+      dayType === "First_Half" || dayType === "Second_Half" ? dayType : null
+    );
+    if (overlapMessage) {
       return {
         isValid: false,
-        message: `There is already an approved leave on ${
-          date.toISOString().split("T")[0]
-        }. Please select a different date.`,
+        message: overlapMessage,
       };
     }
 
@@ -139,7 +271,13 @@ const verifySickLeave = async (
   };
 };
 
-const verifyBurnoutLeave = async (user, selectedDates, leaveDayArray, reason) => {
+const verifyBurnoutLeave = async (
+  user,
+  selectedDates,
+  leaveDayArray,
+  leaveTimeArray,
+  reason
+) => {
   if (!Array.isArray(selectedDates) || selectedDates.length === 0) {
     return { isValid: false, message: "No dates provided for burnout leave." };
   }
@@ -205,7 +343,13 @@ const verifyBurnoutLeave = async (user, selectedDates, leaveDayArray, reason) =>
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  for (const date of formattedDates) {
+  for (let i = 0; i < formattedDates.length; i++) {
+    const date = formattedDates[i];
+    const dayType = halfDays[i] || "Full_Day";
+    const halfSlot =
+      leaveTimeArray && Array.isArray(leaveTimeArray)
+        ? leaveTimeArray[i]
+        : null;
     if (date < today) {
       return {
         isValid: false,
@@ -221,6 +365,20 @@ const verifyBurnoutLeave = async (user, selectedDates, leaveDayArray, reason) =>
         message: `The date ${
           date.toISOString().split("T")[0]
         } is a weekend or a public holiday. Please select a different date.`,
+      };
+    }
+
+    const overlapMessage = await validateOverlapWithHalfDayRules(
+      user,
+      date,
+      "Burnout_Leave",
+      dayType,
+      halfSlot
+    );
+    if (overlapMessage) {
+      return {
+        isValid: false,
+        message: overlapMessage,
       };
     }
 
@@ -255,20 +413,6 @@ const verifyBurnoutLeave = async (user, selectedDates, leaveDayArray, reason) =>
         } burnout leave days remaining.`,
       };
     }
-  }
-
-  const overlappingLeave = await Leave.findOne({
-    user: user,
-    dates: { $in: formattedDates },
-    status: "Approved",
-  });
-  if (overlappingLeave) {
-    return {
-      isValid: false,
-      message: `There is already an approved leave on ${
-        overlappingLeave.dates.toISOString().split("T")[0]
-      }. Please select a different date.`,
-    };
   }
 
   console.log(
