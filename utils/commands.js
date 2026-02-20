@@ -5037,6 +5037,14 @@ const scheduleMonthlySummary = () => {
     const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
     const isLastDay = now.getDate() === lastDayOfMonth;
 
+    // Skip if today is a weekend or public holiday
+    // Normalize date to midnight for accurate comparison
+    const todayNormalized = new Date(now);
+    todayNormalized.setHours(0, 0, 0, 0);
+    if (isWeekendOrPublicHoliday(todayNormalized)) {
+      return;
+    }
+
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
