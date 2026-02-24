@@ -128,6 +128,7 @@ app.command("/upcoming-leaves", upcomingLeaves);
 app.command("/cancel-leave", cancelLeave);
 
 app.action(/select_(.*)_leave/, handleLeaveTypeSelection);
+app.action("select_menstrual_leave", handleLeaveTypeSelection);
 app.action("select_restricted_leave", handleLeaveTypeSelection);
 
 app.action("add_more_days_button", handleAddMoreDays);
