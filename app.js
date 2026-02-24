@@ -25,7 +25,7 @@ const {
   handleAddMoreDays,
   handleDateSelectionSubmission,
   handleCasualLeaveSubmission,
-  handleMenstrualLeaveSubmission,
+  handleMensuralLeaveSubmission,
   handleUnpaidLeaveSubmission,
   handleBurnoutLeaveSubmission,
   handleWorkFromHomeSubmission,
@@ -80,7 +80,7 @@ app.view("casual_leave_application_modal", handleCasualLeaveSubmission);
 
 app.view("burnout_leave_application_modal", handleBurnoutLeaveSubmission);
 
-app.view("menstrual_leave_application_modal", handleMenstrualLeaveSubmission);
+app.view("mensural_leave_application_modal", handleMensuralLeaveSubmission);
 
 app.view("unpaid_leave_application_modal", handleUnpaidLeaveSubmission);
 
