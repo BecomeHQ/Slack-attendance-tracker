@@ -270,7 +270,7 @@ const openLeaveTypeModal = async ({ ack, body, client }) => {
                 type: "button",
                 text: {
                   type: "plain_text",
-                  text: `Mensural Leave (${leaveBalances.mensuralLeaves})`,
+                  text: `Menstrual Leave (${leaveBalances.mensuralLeaves})`,
                 },
                 value: "mensural_leave",
                 action_id: "select_mensural_leave",
@@ -1602,7 +1602,7 @@ const handleLeaveTypeSelection = async ({ ack, body, client }) => {
         callback_id: "mensural_leave_application_modal",
         title: {
           type: "plain_text",
-          text: "Apply for Mensural Leave",
+          text: "Apply for Menstrual Leave",
         },
         blocks: [
           {
