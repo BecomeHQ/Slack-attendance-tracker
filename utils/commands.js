@@ -32,11 +32,19 @@ const calculateLeaveDays = (dates) => {
 
 const isWeekendOrPublicHoliday = (date) => {
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+  // Compare only the calendar date (YYYY-MM-DD) so that
+  // timezone differences between stored holidays and `date`
+  // do not break equality checks.
+  const dateStr = date.toISOString().split("T")[0];
+
   const isPublicHoliday =
     Array.isArray(publicHolidaysList) &&
-    publicHolidaysList.some(
-      (holiday) => holiday.date.getTime() === date.getTime()
-    );
+    publicHolidaysList.some((holiday) => {
+      const holidayStr = holiday.date.toISOString().split("T")[0];
+      return holidayStr === dateStr;
+    });
+
   return isWeekend || isPublicHoliday;
 };
 
