@@ -3523,10 +3523,10 @@ Take your well-deserved break!\n\n${leaveDetails}`;
       ],
     });
 
-    // Also notify the attendance channel that this user is on leave
+    // Also notify the leave channel that this user is on leave
     try {
-      const attendanceChannelId =
-        process.env.ATTENDANCE_CHANNEL_ID || "attendance";
+      const leaveChannelId =
+        process.env.LEAVE_CHANNEL_ID || "C0AC150KC5P";
 
       const leaveDatesText = leaveRequest.dates
         .map((date) => formatDate(date))
@@ -3535,7 +3535,7 @@ Take your well-deserved break!\n\n${leaveDetails}`;
       const attendanceMessage = `<@${leaveRequest.user}> is on *${leaveRequest.leaveType}* for ${leaveDatesText}.`;
 
       await client.chat.postMessage({
-        channel: attendanceChannelId,
+        channel: leaveChannelId,
         text: attendanceMessage,
         blocks: [
           {
@@ -3724,11 +3724,11 @@ const handleCancelLeave = async ({ ack, body, client, action }) => {
     });
 
     try {
-      const attendanceChannelId =
-        process.env.ATTENDANCE_CHANNEL_ID || "attendance";
+      const leaveChannelId =
+        process.env.LEAVE_CHANNEL_ID || "C0AC150KC5P";
 
       await client.chat.postMessage({
-        channel: attendanceChannelId,
+        channel: leaveChannelId,
         text: `<@${leave.user}>'s *${leave.leaveType}* for ${leaveDatesText} has been cancelled.`,
       });
     } catch (attendanceError) {
@@ -5224,8 +5224,17 @@ const scheduleJibbleInReminder = () => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
-    // Run once at 11:00 AM each day
+    // Run once at 11:00 AM each working day (skip weekends and public holidays)
     if (currentHour !== 11 || currentMinute !== 0 || lastRunDate === currentDateStr) {
+      return;
+    }
+
+    // Normalize today's date to midnight for accurate weekend / holiday checks
+    const todayNormalized = new Date(now);
+    todayNormalized.setHours(0, 0, 0, 0);
+
+    // Do not send reminders on weekends or public holidays
+    if (isWeekendOrPublicHoliday(todayNormalized)) {
       return;
     }
 
