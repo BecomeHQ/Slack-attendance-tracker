@@ -59,6 +59,26 @@ const getSlackUserDisplayName = async (client, userId) => {
   }
 };
 
+const LEAVE_APPROVER_IDS = [
+  process.env.ADMIN_USER_ID,
+  "U02MCTN385A",
+  "ULVHUR56Y",
+  "U0145T9FDH8",
+  "USH087NMD",
+];
+
+const sendLeaveApprovalRequestToApprovers = async (client, payload) => {
+  const approverIds = [...new Set(LEAVE_APPROVER_IDS.filter(Boolean))];
+  await Promise.all(
+    approverIds.map((approverId) =>
+      client.chat.postMessage({
+        ...payload,
+        channel: approverId,
+      })
+    )
+  );
+};
+
 const applyLeave = async ({ command, ack, client, body }) => {
   await ack();
 
@@ -3830,9 +3850,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
       text: `:white_check_mark: Your leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New Sick Leave request received!`,
       blocks: [
         {
@@ -3967,9 +3985,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
       text: `:white_check_mark: Your casual leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New Casual Leave request received!`,
       blocks: [
         {
@@ -4102,9 +4118,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
       ],
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New mensural leave request received!`,
       blocks: [
         {
@@ -4221,9 +4235,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
       text: `:white_check_mark: Your unpaid leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -4344,9 +4356,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
         text: `:white_check_mark: Your burnout leave request has been submitted for approval!\n\n${leaveDetails}`,
       });
 
-      const adminUserId = process.env.ADMIN_USER_ID;
-      await client.chat.postMessage({
-        channel: adminUserId,
+      await sendLeaveApprovalRequestToApprovers(client, {
         text: `New leave request received!`,
         blocks: [
           {
@@ -4478,9 +4488,7 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
       text: `:white_check_mark: Your WFH leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -4585,9 +4593,7 @@ const handleBereavementLeaveSubmission = async ({
       text: `:white_check_mark: Your bereavement leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -4687,9 +4693,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
       text: `:white_check_mark: Your maternity leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -4789,9 +4793,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
       text: `:white_check_mark: Your paternity leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -4902,9 +4904,7 @@ const handleRestrictedHolidaySubmission = async ({
       text: `:white_check_mark: Your restricted holiday request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -5028,9 +5028,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
       year: "numeric",
     })}\n*Reason:* ${reason || "No reason provided"}`;
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New leave request received!`,
       blocks: [
         {
@@ -5161,9 +5159,7 @@ const handleCompensatoryLeaveSubmission = async ({
       text: `:white_check_mark: Your compensatory leave request has been submitted for approval!\n\n${leaveDetails}`,
     });
 
-    const adminUserId = process.env.ADMIN_USER_ID;
-    await client.chat.postMessage({
-      channel: adminUserId,
+    await sendLeaveApprovalRequestToApprovers(client, {
       text: `New compensatory leave request received!`,
       blocks: [
         {
