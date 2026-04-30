@@ -65,6 +65,7 @@ const LEAVE_APPROVER_IDS = [
   "ULVHUR56Y",
   "U0145T9FDH8",
   "USH087NMD",
+  "U01CN2WA1T2"
 ];
 
 const sendLeaveApprovalRequestToApprovers = async (client, payload) => {
