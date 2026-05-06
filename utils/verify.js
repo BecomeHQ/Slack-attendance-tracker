@@ -239,24 +239,6 @@ const verifySickLeave = async (
       };
     }
 
-    const previousDay = new Date(date);
-    previousDay.setDate(date.getDate() - 1);
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-
-    const adjacentLeave = await Leave.findOne({
-      user: user,
-      dates: { $in: [previousDay, nextDay] },
-      status: "Approved",
-    });
-    if (adjacentLeave) {
-      return {
-        isValid: false,
-        message: `Clubbing sick leave with other leaves is not allowed. Please ensure no leaves are applied one day before or after ${
-          date.toISOString().split("T")[0]
-        }.`,
-      };
-    }
   }
 
   console.log(
