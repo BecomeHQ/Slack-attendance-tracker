@@ -70,13 +70,76 @@ const LEAVE_APPROVER_IDS = [
 
 const sendLeaveApprovalRequestToApprovers = async (client, payload) => {
   const approverIds = [...new Set(LEAVE_APPROVER_IDS.filter(Boolean))];
-  await Promise.all(
+  const postedMessages = await Promise.all(
     approverIds.map((approverId) =>
       client.chat.postMessage({
         ...payload,
         channel: approverId,
       })
     )
+  );
+
+  const approveActionId =
+    payload?.blocks
+      ?.flatMap((block) => block.elements || [])
+      ?.find((el) => typeof el?.action_id === "string" && el.action_id.startsWith("approve_leave_"))
+      ?.action_id || "";
+
+  const leaveId = approveActionId.replace("approve_leave_", "");
+  if (leaveId) {
+    await Leave.findByIdAndUpdate(leaveId, {
+      $set: {
+        approverMessages: postedMessages.map((msg, index) => ({
+          approverId: approverIds[index],
+          channel: msg.channel,
+          ts: msg.ts,
+        })),
+      },
+    });
+  }
+};
+
+const updateApproverMessagesForResolvedLeave = async (
+  client,
+  leaveRequest,
+  resolvedText
+) => {
+  const messageTargets = Array.isArray(leaveRequest?.approverMessages)
+    ? leaveRequest.approverMessages
+    : [];
+
+  if (messageTargets.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    messageTargets.map(async ({ channel, ts }) => {
+      if (!channel || !ts) {
+        return;
+      }
+
+      try {
+        await client.chat.update({
+          channel,
+          ts,
+          text: resolvedText,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: resolvedText,
+              },
+            },
+          ],
+        });
+      } catch (error) {
+        console.error(
+          `Error updating approver message for leave ${leaveRequest?._id}:`,
+          error
+        );
+      }
+    })
   );
 };
 
@@ -930,9 +993,7 @@ const rejectLeave = async ({ ack, body, client, action }) => {
 };
 
 const handleRejectLeaveReasonSubmission = async ({ ack, body, view, client }) => {
-  const { leaveId, channelId, messageTs } = JSON.parse(
-    view.private_metadata || "{}"
-  );
+  const { leaveId } = JSON.parse(view.private_metadata || "{}");
 
   const rejectionReason =
     view.state.values.rejection_reason_block.rejection_reason_input.value?.trim() ||
@@ -961,24 +1022,26 @@ const handleRejectLeaveReasonSubmission = async ({ ack, body, view, client }) =>
   await ack();
 
   try {
-    const leaveRequest = await Leave.findByIdAndUpdate(
-      leaveId,
+    const leaveRequest = await Leave.findOneAndUpdate(
+      { _id: leaveId, status: "Pending" },
       { status: "Rejected" },
       { new: true }
     );
 
     if (!leaveRequest) {
-      throw new Error("Leave request not found while saving rejection reason");
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text: "This leave request was already processed by another approver.",
+      });
+      return;
     }
 
-    if (channelId && messageTs) {
-      await client.chat.update({
-        channel: channelId,
-        ts: messageTs,
-        text: `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`,
-        blocks: [],
-      });
-    }
+    const rejectResolvedText = `Leave request for <@${leaveRequest.user}> has been rejected and removed from the list.`;
+    await updateApproverMessagesForResolvedLeave(
+      client,
+      leaveRequest,
+      rejectResolvedText
+    );
 
     await client.chat.postMessage({
       channel: leaveRequest.user,
@@ -3366,14 +3429,18 @@ const approveLeave = async ({ ack, body, client, action }) => {
   }
 
   try {
-    const leaveRequest = await Leave.findByIdAndUpdate(
-      leaveId,
+    const leaveRequest = await Leave.findOneAndUpdate(
+      { _id: leaveId, status: "Pending" },
       { status: "Approved" },
       { new: true }
     );
 
     if (!leaveRequest) {
-      throw new Error("Leave request not found");
+      await client.chat.postMessage({
+        channel: body.user.id,
+        text: "This leave request was already processed by another approver.",
+      });
+      return;
     }
 
     const user = await User.findOne({ slackId: leaveRequest.user });
@@ -3522,20 +3589,12 @@ Take your well-deserved break!\n\n${leaveDetails}`;
 
     await user.save();
 
-    await client.chat.update({
-      channel: body.channel.id,
-      ts: body.message.ts,
-      text: `Leave request for <@${leaveRequest.user}> has been approved and removed from the list.`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `Leave request for <@${leaveRequest.user}> has been approved and removed from the list.`,
-          },
-        },
-      ],
-    });
+    const approveResolvedText = `Leave request for <@${leaveRequest.user}> has been approved and removed from the list.`;
+    await updateApproverMessagesForResolvedLeave(
+      client,
+      leaveRequest,
+      approveResolvedText
+    );
 
     // Notify the user directly
     await client.chat.postMessage({

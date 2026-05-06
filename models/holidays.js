@@ -27,6 +27,16 @@ const leaveSchema = new mongoose.Schema({
   leaveType: { type: String, required: true },
   leaveDay: { type: [String], required: true },
   leaveTime: { type: [String], required: true },
+  approverMessages: {
+    type: [
+      {
+        approverId: String,
+        channel: String,
+        ts: String,
+      },
+    ],
+    default: [],
+  },
 });
 
 const Leave = mongoose.model("Leave", leaveSchema);
