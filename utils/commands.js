@@ -16,6 +16,7 @@ const {
 const { User } = require("../models/user.js");
 const { Attendance } = require("../models/checkin");
 const { publicHolidaysList, restrictedHolidaysList } = require("../mode.js");
+const { getLeaveApproverIdsForApplicant } = require("./leaveApproverRouting.js");
 const app = require("../utils/slack-instance.js");
 const formatDate = (dateString) => {
   const date = new Date(dateString);
@@ -59,21 +60,23 @@ const getSlackUserDisplayName = async (client, userId) => {
   }
 };
 
-const LEAVE_APPROVER_IDS = [
-  process.env.ADMIN_USER_ID,
-  "U02MCTN385A",
-  "ULVHUR56Y",
-  "U0145T9FDH8",
-  "USH087NMD",
-  "U01CN2WA1T2"
-];
-
 const sendLeaveApprovalRequestToApprovers = async (client, payload) => {
-  const approverIds = [...new Set(LEAVE_APPROVER_IDS.filter(Boolean))];
+  const applicantSlackUserId = payload._leaveApplicantSlackUserId;
+  const { _leaveApplicantSlackUserId, ...messagePayload } = payload;
+  const approverIds = [
+    ...new Set(getLeaveApproverIdsForApplicant(applicantSlackUserId).filter(Boolean)),
+  ];
+  if (approverIds.length === 0) {
+    console.error(
+      "sendLeaveApprovalRequestToApprovers: no approvers resolved for applicant",
+      applicantSlackUserId
+    );
+    return;
+  }
   const postedMessages = await Promise.all(
     approverIds.map((approverId) =>
       client.chat.postMessage({
-        ...payload,
+        ...messagePayload,
         channel: approverId,
       })
     )
@@ -3911,6 +3914,7 @@ const handleSickLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New Sick Leave request received!`,
       blocks: [
         {
@@ -4046,6 +4050,7 @@ const handleCasualLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New Casual Leave request received!`,
       blocks: [
         {
@@ -4179,6 +4184,7 @@ const handleMensuralLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New mensural leave request received!`,
       blocks: [
         {
@@ -4296,6 +4302,7 @@ const handleUnpaidLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -4417,6 +4424,7 @@ const handleBurnoutLeaveSubmission = async ({ ack, body, view, client }) => {
       });
 
       await sendLeaveApprovalRequestToApprovers(client, {
+        _leaveApplicantSlackUserId: user,
         text: `New leave request received!`,
         blocks: [
           {
@@ -4549,6 +4557,7 @@ const handleWorkFromHomeSubmission = async ({ ack, body, client, view }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -4654,6 +4663,7 @@ const handleBereavementLeaveSubmission = async ({
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -4754,6 +4764,7 @@ const handleMaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -4854,6 +4865,7 @@ const handlePaternityLeaveSubmission = async ({ ack, body, view, client }) => {
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -4965,6 +4977,7 @@ const handleRestrictedHolidaySubmission = async ({
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -5089,6 +5102,7 @@ const handleInternshipLeaveSubmission = async ({ ack, body, view, client }) => {
     })}\n*Reason:* ${reason || "No reason provided"}`;
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New leave request received!`,
       blocks: [
         {
@@ -5220,6 +5234,7 @@ const handleCompensatoryLeaveSubmission = async ({
     });
 
     await sendLeaveApprovalRequestToApprovers(client, {
+      _leaveApplicantSlackUserId: user,
       text: `New compensatory leave request received!`,
       blocks: [
         {
