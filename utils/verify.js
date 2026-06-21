@@ -1352,12 +1352,12 @@ const verifyWFHLeave = async (user, selectedDates, reason) => {
   const userRecord = await User.findOne({ slackId: user });
   const wfhLeavesTaken = userRecord ? userRecord.wfhLeave : 0;
   const totalWFHLeaves = wfhLeavesTaken + selectedDates.length;
-  const remainingWFHLeaves = 4 - totalWFHLeaves;
+  const remainingWFHLeaves = 10 - totalWFHLeaves;
 
-  if (totalWFHLeaves > 4) {
+  if (totalWFHLeaves > 10) {
     return {
       isValid: false,
-      message: `Exceeded the limit of 4 WFH leaves per month. You have ${
+      message: `Exceeded the limit of 10 WFH leaves per year. You have ${
         remainingWFHLeaves < 0 ? 0 : remainingWFHLeaves
       } WFH leave days remaining.`,
     };
